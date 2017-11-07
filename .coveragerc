@@ -1,2 +1,3 @@
 [run]
 source=pymom6
+omit=pymom6/tests/*
