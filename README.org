@@ -1,0 +1,3 @@
+A python package built on top of numpy and xarray to deal with MOM6 output.
+
+[[https://travis-ci.org/suyashbire1/pymom6.svg?branch=master]]
