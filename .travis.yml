@@ -1,0 +1,13 @@
+# Based on http://conda.pydata.org/docs/travis.html
+language: python
+python:
+  - "3.6"
+  - "3.7"
+
+install:
+  - sudo apt-get update
+  - pip install numpy netCDF4 xarray numba
+  - python setup.py install
+
+script:
+  - pytest
