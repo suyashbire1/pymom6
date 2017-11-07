@@ -4,7 +4,7 @@ python:
   - "3.6"
 
 install:
-  - pip install numpy netCDF4 xarray numba
+  - pip install numpy netCDF4 xarray numba pytest-cov coverage
 
 script:
-  - pytest
+  - py.test --cov=./
