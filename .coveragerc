@@ -1,3 +1,6 @@
 [run]
-source=pymom6
-omit=pymom6/tests/*
+branch = True
+source = pymom6
+
+[report]
+omit = pymom6/tests/*
