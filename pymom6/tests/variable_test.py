@@ -1,0 +1,203 @@
+# from pymom6 import pymom6
+import pymom6
+from netCDF4 import Dataset as dset, MFDataset as mfdset
+import numpy as np
+import xarray as xr
+import unittest
+import os.path
+gv3 = pymom6.MOM6Variable
+geom = pymom6.GridGeometry
+
+
+class test_variable(unittest.TestCase):
+    def setUp(self):
+        self.south_lat, self.north_lat = 30, 40
+        self.west_lon, self.east_lon = -10, -5
+        path = os.path.dirname(__file__) + '/data/'
+        self.fh = dset(path + 'output__0001_12_009.nc')
+        self.geom = geom(path + 'ocean_geometry.nc')
+        self.mfh = mfdset(
+            [path + 'output__0001_11_019.nc', path + 'output__0001_12_009.nc'])
+        self.initializer = dict(
+            south_lat=self.south_lat,
+            north_lat=self.north_lat,
+            west_lon=self.west_lon,
+            east_lon=self.east_lon)
+        self.vars = ['e', 'u', 'v', 'wparam', 'RV']
+
+    def tearDown(self):
+        self.fh.close()
+        self.mfh.close()
+
+    def test_locations(self):
+        hlocs = ['h', 'u', 'v', 'h', 'q']
+        vlocs = ['i', 'l', 'l', 'l', 'l']
+        for i, var in enumerate(self.vars):
+            gvvar = gv3(var, self.fh, **self.initializer)
+            self.assertEqual(gvvar.hloc, hlocs[i])
+            self.assertEqual(gvvar.vloc, vlocs[i])
+
+    def test_has_indices(self):
+        for i, var in enumerate(self.vars):
+            gvvar = gv3(var, self.fh, **self.initializer)
+            for dim in gvvar.dimensions:
+                self.assertIn(dim, gvvar.indices)
+
+    def test_array(self):
+        for var in self.vars:
+            gvvar = gv3(var, self.fh,
+                        **self.initializer).get_slice().read().compute().array
+            self.assertIsInstance(gvvar, np.ndarray)
+
+    def test_multifile_array(self):
+        for var in self.vars:
+            gvvar = gv3(var, self.mfh,
+                        **self.initializer).get_slice().read().compute().array
+            self.assertIsInstance(gvvar, np.ndarray)
+
+    def test_array_full(self):
+        for var in self.vars:
+            gvvar = gv3(var, self.fh).get_slice().read().compute().array
+            var_array = self.fh.variables[var][:]
+            self.assertTrue(np.allclose(gvvar, var_array))
+
+    def test_array_full_fillvalue(self):
+        for i, fill in enumerate([np.nan, 0]):
+            gvvar = gv3(
+                'u', self.fh,
+                fillvalue=fill).get_slice().read().compute().array
+            if i == 0:
+                self.assertTrue(np.all(np.isnan(gvvar[:, :, :, -1])))
+            else:
+                self.assertTrue(
+                    np.all(gvvar[:, :, :, -1] == 0),
+                    msg=f'{gvvar[:, :, :, -1]}')
+
+    def test_numpy_func(self):
+        for var in self.vars:
+            gvvar = gv3(
+                var, self.fh, fillvalue=0).get_slice().read().np_ops(
+                    np.mean, keepdims=True).compute().array
+            var_array = self.fh.variables[var][:]
+            if np.ma.isMaskedArray(var_array):
+                var_array = var_array.filled(0)
+            var_array = np.mean(var_array, keepdims=True)
+            self.assertTrue(
+                np.allclose(gvvar, var_array), msg=f'{gvvar,var_array}')
+
+    def test_boundary_conditions(self):
+        for var in self.vars:
+            gvvar = gv3(var, self.fh).xsm().xep().ysm().yep().get_slice().read(
+            ).compute().array
+            var_array = self.fh.variables[var][:]
+            shape1 = gvvar.shape
+            shape2 = var_array.shape
+            self.assertTrue(shape1[0] == shape2[0])
+            self.assertTrue(shape1[1] == shape2[1])
+            self.assertTrue(shape1[2] == shape2[2] + 2)
+            self.assertTrue(shape1[3] == shape2[3] + 2)
+
+    def test_final_locs(self):
+        hlocs = ['h', 'u', 'v', 'q']
+        vlocs = ['l', 'i']
+        vdims = ['zl', 'zi']
+        ydims = ['yh', 'yh', 'yq', 'yq']
+        xdims = ['xh', 'xq', 'xh', 'xq']
+        for var in self.vars:
+            for i, hloc in enumerate(hlocs):
+                for j, vloc in enumerate(vlocs):
+                    gvvar = gv3(
+                        var,
+                        self.fh,
+                        final_loc=hloc + vloc,
+                        **self.initializer)
+                    dims = gvvar._final_dimensions
+                    self.assertTrue(dims[0] == 'Time')
+                    self.assertTrue(dims[1] == vdims[j])
+                    self.assertTrue(dims[2] == ydims[i])
+                    self.assertTrue(dims[3] == xdims[i])
+
+    def test_modify_indices(self):
+        plusminus = [-1, 1]
+        for i, dim in enumerate(['z', 'y', 'x']):
+            for j, op in enumerate(['sm', 'ep']):
+                for var in self.vars:
+                    gvvar = gv3(var, self.fh, **self.initializer)
+                    a = gvvar.indices[gvvar._final_dimensions[i + 1]]
+                    gvvar = getattr(gvvar, dim + op)()
+                    b = gvvar.indices[gvvar._final_dimensions[i + 1]]
+                    self.assertEqual(a[j] + plusminus[j], b[j])
+
+    def test_nanmean_tz(self):
+        for var in self.vars:
+            gvvar = (gv3(var, self.fh).get_slice().read()
+                     .nanmean(axis=(0, 1)).compute())
+            dims = gvvar.dimensions
+            self.assertTrue(list(dims.items())[0][1].size == 1)
+            self.assertTrue(list(dims.items())[1][1].size == 1)
+            var_array = self.fh.variables[var][:]
+            if np.ma.isMaskedArray(var_array):
+                var_array.filled(0)
+            var_array = np.nanmean(var_array, axis=(0, 1), keepdims=False)
+            self.assertTrue(np.allclose(gvvar.array, var_array))
+            gvvar = (gv3(var, self.fh).get_slice().read()
+                     .nanmean(axis=1).compute())
+            dims = gvvar.dimensions
+            self.assertTrue(list(dims.items())[1][1].size == 1)
+            var_array = self.fh.variables[var][:]
+            if np.ma.isMaskedArray(var_array):
+                var_array = var_array.filled(0)
+            var_array = np.nanmean(var_array, axis=1, keepdims=False)
+            self.assertTrue(
+                np.allclose(gvvar.array, var_array),
+                msg=f'{var, gvvar.array-var_array}')
+
+    def test_nanmean_xy(self):
+        for var in self.vars:
+            gvvar = (gv3(var, self.fh).get_slice().read()
+                     .nanmean(axis=(2, 3)).compute())
+            dims = gvvar.dimensions
+            self.assertTrue(list(dims.items())[2][1].size == 1)
+            self.assertTrue(list(dims.items())[3][1].size == 1)
+            var_array = self.fh.variables[var][:]
+            if np.ma.isMaskedArray(var_array):
+                var_array = var_array.filled(0)
+            var_array = np.nanmean(var_array, axis=(2, 3), keepdims=False)
+            self.assertTrue(np.allclose(gvvar.array, var_array), )
+            gvvar = (gv3(var, self.fh).get_slice().read()
+                     .nanmean(axis=2).compute())
+            dims = gvvar.dimensions
+            self.assertTrue(list(dims.items())[2][1].size == 1)
+            var_array = self.fh.variables[var][:]
+            if np.ma.isMaskedArray(var_array):
+                var_array = var_array.filled(0)
+            var_array = np.nanmean(var_array, axis=2, keepdims=False)
+            self.assertTrue(
+                np.allclose(gvvar.array, var_array),
+                msg=f'{var, gvvar.array-var_array}')
+
+    def test_xarray(self):
+        for var in self.vars:
+            gvvar = gv3(
+                var, self.fh, units='m', math='1',
+                **self.initializer).get_slice().read().to_DataArray()
+            self.assertIsInstance(gvvar, xr.DataArray)
+            self.assertTrue(gvvar.name == var)
+            self.assertTrue(gvvar.attrs['math'] == '1')
+            self.assertTrue(gvvar.attrs['units'] == 'm')
+
+    def test_get_var_at_z(self):
+        array = np.full((1, 3, 5, 5), 1)
+        array[:, 0, :, :] = 2
+        array[:, 2, :, :] = 0
+        e = np.full((1, 4, 5, 5), -2500)
+        e[:, 0] = 0
+        e[:, 1] = -1000
+        e[:, 2] = -2000
+        z = np.array([-2500, -1250, -750, -1])
+        array_at_z = gv3.get_var_at_z(array, z, e)
+        self.assertTrue(np.all(array_at_z[:, 0] == 0))
+        self.assertTrue(np.all(array_at_z[:, 1] == 1))
+        self.assertTrue(np.all(array_at_z[:, 2] == 2))
+        self.assertTrue(np.all(array_at_z[:, 3] == 2))
+        pass
