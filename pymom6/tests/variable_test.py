@@ -7,6 +7,7 @@ import unittest
 import os.path
 gv3 = pymom6.MOM6Variable
 geom = pymom6.GridGeometry
+pdset = pymom6.Dataset
 
 
 class test_variable(unittest.TestCase):
@@ -14,10 +15,11 @@ class test_variable(unittest.TestCase):
         self.south_lat, self.north_lat = 30, 40
         self.west_lon, self.east_lon = -10, -5
         path = os.path.dirname(__file__) + '/data/'
-        self.fh = dset(path + 'output__0001_12_009.nc')
+        self.fil1 = path + 'output__0001_12_009.nc'
+        self.fil2 = path + 'output__0001_11_019.nc'
+        self.fh = dset(self.fil1)
         self.geom = geom(path + 'ocean_geometry.nc')
-        self.mfh = mfdset(
-            [path + 'output__0001_11_019.nc', path + 'output__0001_12_009.nc'])
+        self.mfh = mfdset([self.fil2, self.fil1])
         self.initializer = dict(
             south_lat=self.south_lat,
             north_lat=self.north_lat,
@@ -47,7 +49,11 @@ class test_variable(unittest.TestCase):
         for var in self.vars:
             gvvar = gv3(var, self.fh,
                         **self.initializer).get_slice().read().compute().array
+            with pdset(self.fil1, **self.initializer) as pdset_sub:
+                pdvar = getattr(pdset_sub,
+                                var).get_slice().read().compute().array
             self.assertIsInstance(gvvar, np.ndarray)
+            self.assertTrue(np.allclose(gvvar, pdvar))
 
     def test_multifile_array(self):
         for var in self.vars:
@@ -59,7 +65,11 @@ class test_variable(unittest.TestCase):
         for var in self.vars:
             gvvar = gv3(var, self.fh).get_slice().read().compute().array
             var_array = self.fh.variables[var][:]
+            with pdset(self.fil1) as pdset_full:
+                pdvar = getattr(pdset_full,
+                                var).get_slice().read().compute().array
             self.assertTrue(np.allclose(gvvar, var_array))
+            self.assertTrue(np.allclose(gvvar, pdvar))
 
     def test_array_full_fillvalue(self):
         for i, fill in enumerate([np.nan, 0]):

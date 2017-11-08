@@ -1,7 +1,7 @@
 import numpy as np
 from functools import partial, partialmethod
 from collections import OrderedDict
-from netCDF4 import Dataset as dset
+from netCDF4 import Dataset as dset, MFDataset as mfdset
 import xarray as xr
 from numba import jit
 
@@ -11,6 +11,26 @@ def find_index_limits(dimension, start, end):
     useful_index = np.nonzero((dimension >= start) & (dimension <= end))[0]
     lims = useful_index[0], useful_index[-1] + 1
     return lims
+
+
+class Dataset():
+    def __init__(self, fil, **initializer):
+        self.fil = fil
+        self.initializer = initializer
+
+    def __enter__(self):
+        self.fh = mfdset(self.fil) if isinstance(self.fil, list) else dset(
+            self.fil)
+        for var in self.fh.variables:
+            try:
+                setattr(self, var,
+                        MOM6Variable(var, self.fh, **self.initializer))
+            except AttributeError:
+                setattr(self, var, self.fh.variables[var][:])
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.fh.close()
 
 
 class GridGeometry():
@@ -197,33 +217,31 @@ class BoundaryCondition():
 
 
 class MOM6Variable(Domain):
-    def __init__(self,
-                 var,
-                 fh,
-                 final_loc=None,
-                 bc_type=None,
-                 fillvalue=0,
-                 **initializer):
+    def __init__(self, var, fh, **initializer):
+        self._name = initializer.get('name', var)
         self._v = fh.variables[var]
         self._initial_dimensions = list(self._v.dimensions)
         self._current_dimensions = list(self._v.dimensions)
-        self._fillvalue = fillvalue
         self.determine_location()
         initializer['fh'] = fh
+        self.polish(**initializer)
+
+    def polish(self, **initializer):
         Domain.__init__(self, **initializer)
+        final_loc = initializer.get('final_loc', None)
         if final_loc:
             self._final_loc = final_loc
         else:
             self._final_loc = self._current_hloc + self._current_vloc
             self._final_dimensions = tuple(self._current_dimensions)
         self.get_final_location_dimensions()
-        self._bc_type = bc_type
+        self._fillvalue = initializer.get('fillvalue', 0)
+        self._bc_type = initializer.get('bc_type', None)
         self.geometry = initializer.get('geometry', None)
-        self.array = None
-        self.operations = []
-        self._name = initializer.get('name', var)
         self._units = initializer.get('units', None)
         self._math = initializer.get('math', None)
+        self.array = None
+        self.operations = []
 
     def determine_location(self):
         dims = self._current_dimensions
