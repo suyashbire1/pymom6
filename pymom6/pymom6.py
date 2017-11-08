@@ -552,3 +552,67 @@ class MOM6Variable(Domain):
     def units(self, units):
         assert isinstance(units, str)
         self._units = units
+
+    def match_location(self, other):
+        return (self._current_hloc == other._current_hloc
+                and self._current_vloc == other._current_vloc)
+
+    def __add__(self, other):
+        if hasattr(other, 'array') and self.match_location(other):
+            self.array += other.values
+        else:
+            self.array += other
+        return self
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __iadd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        if hasattr(other, 'array') and self.match_location(other):
+            self.array -= other.values
+        else:
+            self.array -= other
+        return self
+
+    def __rsub__(self, other):
+        return -self.__sub__(other)
+
+    def __isub__(self, other):
+        return self.__sub__(other)
+
+    def __mul__(self, other):
+        if hasattr(other, 'array') and self.match_location(other):
+            self.array *= other.values
+        else:
+            self.array *= other
+        return self
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __imul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        if hasattr(other, 'array') and self.match_location(other):
+            self.array /= other.values
+        else:
+            self.array /= other
+        return self
+
+    def __rtruediv__(self, other):
+        if hasattr(other, 'array') and self.match_location(other):
+            self.array = other.values / self.array
+        else:
+            self.array = other / self.array
+        return self
+
+    def __itruediv__(self, other):
+        return self.__truediv__(other)
+
+    def __neg__(self):
+        self.array *= -1
+        return self
