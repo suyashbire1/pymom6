@@ -95,6 +95,15 @@ class test_domain(unittest.TestCase):
         self.assertEqual(c, 1)
         self.assertTrue(np.allclose(zi, zi[a:b:c]))
 
+    def test_stride_vertical_domain(self):
+        for stride in [2, 4]:
+            self.initializer['stridez'] = stride
+            vertdom = pymom6.VerticalDomain(**self.initializer)
+            a, b, c = vertdom.indices['zl']
+            self.assertEqual(c, stride)
+            a, b, c = vertdom.indices['zi']
+            self.assertEqual(c, stride)
+
     def test_temporal_domain(self):
         Time = self.fh.variables['Time'][:]
         a, b, c = pymom6.TemporalDomain(**self.initializer).indices['Time']
@@ -102,6 +111,13 @@ class test_domain(unittest.TestCase):
         self.assertEqual(b, len(Time))
         self.assertEqual(c, 1)
         self.assertTrue(np.allclose(Time, Time[a:b:c]))
+
+    def test_stride_temporal_domain(self):
+        for stride in [2, 4]:
+            self.initializer['stridet'] = stride
+            tdom = pymom6.TemporalDomain(**self.initializer)
+            a, b, c = tdom.indices['Time']
+            self.assertEqual(c, stride)
 
     def test_domain(self):
         zl = self.fh.variables['zl'][:]

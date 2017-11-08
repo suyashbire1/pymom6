@@ -8,13 +8,6 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 
 
-def find_index_limits(dimension, start, end):
-    """Finds the extreme indices of the any given dimension of the domain."""
-    useful_index = np.nonzero((dimension >= start) & (dimension <= end))[0]
-    lims = useful_index[0], useful_index[-1] + 1
-    return lims
-
-
 @contextmanager
 def Dataset(fil, **initializer):
     fh = mfdset(fil) if isinstance(fil, list) else dset(fil)
@@ -47,62 +40,46 @@ class GridGeometry():
         return getattr(self, divisors[loc][axis])
 
 
+def initialize_indices_and_dim_arrays(obj):
+    if hasattr(obj, 'indices') is False:
+        obj.indices = {}
+    if hasattr(obj, 'dim_arrays') is False:
+        obj.dim_arrays = {}
+
+
+def find_index_limits(dimension, start, end):
+    """Finds the extreme indices of the any given dimension of the domain."""
+    useful_index = np.nonzero((dimension >= start) & (dimension <= end))[0]
+    lims = useful_index[0], useful_index[-1] + 1
+    return lims
+
+
+def get_extremes(obj, dim_str, low, high, **initializer):
+    initialize_indices_and_dim_arrays(obj)
+    fh = initializer.get('fh')
+    stride = initializer.get('stride' + dim_str[0].lower(), 1)
+    try:
+        dimension = fh.variables[dim_str][:]
+        low = initializer.get(low, dimension[0])
+        high = initializer.get(high, dimension[-1])
+        obj.indices[dim_str] = *find_index_limits(dimension, low, high), stride
+        obj.dim_arrays[dim_str] = dimension
+    except KeyError:
+        pass
+
+
 class MeridionalDomain():
     def __init__(self, **initializer):
         """Initializes meridional domain limits."""
-        fh = initializer.get('fh')
-        stride = initializer.get('stridey', 1)
-        if hasattr(self, 'indices') is False:
-            self.indices = {}
-        if hasattr(self, 'dim_arrays') is False:
-            self.dim_arrays = {}
-        try:
-            yh = fh.variables['yh'][:]
-            south_lat = initializer.get('south_lat', yh[0])
-            north_lat = initializer.get('north_lat', yh[-1])
-            self.indices['yh'] = *find_index_limits(yh, south_lat,
-                                                    north_lat), stride
-            self.dim_arrays['yh'] = yh
-        except KeyError:
-            pass
-        try:
-            yq = fh.variables['yq'][:]
-            south_lat = initializer.get('south_lat', yq[0])
-            north_lat = initializer.get('north_lat', yq[-1])
-            self.indices['yq'] = *find_index_limits(yq, south_lat,
-                                                    north_lat), stride
-            self.dim_arrays['yq'] = yq
-        except KeyError:
-            pass
+        get_extremes(self, 'yh', 'south_lat', 'north_lat', **initializer)
+        get_extremes(self, 'yq', 'south_lat', 'north_lat', **initializer)
 
 
 class ZonalDomain():
     def __init__(self, **initializer):
         """Initializes zonal domain limits."""
-        fh = initializer.get('fh')
-        stride = initializer.get('stridex', 1)
-        if hasattr(self, 'indices') is False:
-            self.indices = {}
-        if hasattr(self, 'dim_arrays') is False:
-            self.dim_arrays = {}
-        try:
-            xh = fh.variables['xh'][:]
-            west_lon = initializer.get('west_lon', xh[0])
-            east_lon = initializer.get('east_lon', xh[-1])
-            self.indices['xh'] = *find_index_limits(xh, west_lon,
-                                                    east_lon), stride
-            self.dim_arrays['xh'] = xh
-        except KeyError:
-            pass
-        try:
-            xq = fh.variables['xq'][:]
-            west_lon = initializer.get('west_lon', xq[0])
-            east_lon = initializer.get('east_lon', xq[-1])
-            self.indices['xq'] = *find_index_limits(xq, west_lon,
-                                                    east_lon), stride
-            self.dim_arrays['xq'] = xq
-        except KeyError:
-            pass
+        get_extremes(self, 'xh', 'west_lon', 'east_lon', **initializer)
+        get_extremes(self, 'xq', 'west_lon', 'east_lon', **initializer)
 
 
 class HorizontalDomain(MeridionalDomain, ZonalDomain):
@@ -113,46 +90,13 @@ class HorizontalDomain(MeridionalDomain, ZonalDomain):
 
 class VerticalDomain():
     def __init__(self, **initializer):
-        fh = initializer.get('fh')
-        stride = initializer.get('strider', 1)
-        if hasattr(self, 'indices') is False:
-            self.indices = {}
-        if hasattr(self, 'dim_arrays') is False:
-            self.dim_arrays = {}
-        try:
-            zl = fh.variables['zl'][:]
-            low_density = initializer.get('low_density', zl[0])
-            high_density = initializer.get('high_density', zl[-1])
-            self.indices['zl'] = *find_index_limits(zl, low_density,
-                                                    high_density), stride
-            self.dim_arrays['zl'] = zl
-        except KeyError:
-            pass
-        try:
-            zi = fh.variables['zi'][:]
-            low_density = initializer.get('low_density', zi[0])
-            high_density = initializer.get('high_density', zi[-1])
-            self.indices['zi'] = *find_index_limits(zi, low_density,
-                                                    high_density), stride
-            self.dim_arrays['zi'] = zi
-        except KeyError:
-            pass
+        get_extremes(self, 'zl', 'low_density', 'high_density', **initializer)
+        get_extremes(self, 'zi', 'low_density', 'high_density', **initializer)
 
 
 class TemporalDomain():
     def __init__(self, **initializer):
-        fh = initializer.get('fh')
-        Time = fh.variables['Time'][:]
-        initial_time = initializer.get('initial_time', Time[0])
-        final_time = initializer.get('final_time', Time[-1])
-        stride = initializer.get('stridet', 1)
-        if hasattr(self, 'indices') is False:
-            self.indices = {}
-        self.indices['Time'] = *find_index_limits(Time, initial_time,
-                                                  final_time), stride
-        if hasattr(self, 'dim_arrays') is False:
-            self.dim_arrays = {}
-        self.dim_arrays['Time'] = Time
+        get_extremes(self, 'Time', 'initial_time', 'final_time', **initializer)
 
 
 class Domain(TemporalDomain, VerticalDomain, HorizontalDomain):
