@@ -23,6 +23,7 @@ class test_variable(unittest.TestCase):
         self.geom = geom(path + 'ocean_geometry.nc')
         self.mfh = mfdset([self.fil2, self.fil1])
         self.initializer = dict(
+            geometry=self.geom,
             south_lat=self.south_lat,
             north_lat=self.north_lat,
             west_lon=self.west_lon,
@@ -56,6 +57,15 @@ class test_variable(unittest.TestCase):
                                 var).get_slice().read().compute().array
             self.assertIsInstance(gvvar, np.ndarray)
             self.assertTrue(np.allclose(gvvar, pdvar))
+
+    def test_array_divideby(self):
+        for var in self.vars:
+            gvvar = gv3(var, self.fh,
+                        **self.initializer).read().divide_by('dxT').compute()
+            var_array = self.fh.variables[var][gvvar._slice]
+            divisor = gvvar.geometry.dxT[gvvar._slice_2D]
+            var_array /= divisor
+            self.assertTrue(np.allclose(gvvar.array, var_array))
 
     def test_multifile_array(self):
         for var in self.vars:

@@ -279,6 +279,8 @@ class MOM6Variable(Domain):
         return indices
 
     def read(self):
+        self.get_slice()
+
         def lazy_read_and_fill(array):
             array = self._v[self._slice]
             if np.ma.isMaskedArray(array):
@@ -287,6 +289,12 @@ class MOM6Variable(Domain):
 
         self.operations.append(lazy_read_and_fill)
         self.implement_BC_if_necessary()
+        return self
+
+    def divide_by(self, divisor):
+        self.get_slice_2D()
+        divisor = getattr(self.geometry, divisor)[self._slice_2D]
+        self.operations.append(lambda a: a / divisor)
         return self
 
     BoundaryCondition = BoundaryCondition
