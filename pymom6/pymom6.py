@@ -4,6 +4,8 @@ from collections import OrderedDict
 from netCDF4 import Dataset as dset, MFDataset as mfdset
 import xarray as xr
 from numba import jit
+from contextlib import contextmanager
+from types import SimpleNamespace
 
 
 def find_index_limits(dimension, start, end):
@@ -13,24 +15,17 @@ def find_index_limits(dimension, start, end):
     return lims
 
 
-class Dataset():
-    def __init__(self, fil, **initializer):
-        self.fil = fil
-        self.initializer = initializer
-
-    def __enter__(self):
-        self.fh = mfdset(self.fil) if isinstance(self.fil, list) else dset(
-            self.fil)
-        for var in self.fh.variables:
-            try:
-                setattr(self, var,
-                        MOM6Variable(var, self.fh, **self.initializer))
-            except AttributeError:
-                setattr(self, var, self.fh.variables[var][:])
-        return self
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        self.fh.close()
+@contextmanager
+def Dataset(fil, **initializer):
+    fh = mfdset(fil) if isinstance(fil, list) else dset(fil)
+    ds = SimpleNamespace()
+    for var in fh.variables:
+        try:
+            setattr(ds, var, MOM6Variable(var, fh, **initializer))
+        except AttributeError:
+            pass
+    yield ds
+    fh.close()
 
 
 class GridGeometry():

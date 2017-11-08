@@ -9,6 +9,8 @@ gv3 = pymom6.MOM6Variable
 geom = pymom6.GridGeometry
 pdset = pymom6.Dataset
 
+# pdset2 = pymom6.Dataset2
+
 
 class test_variable(unittest.TestCase):
     def setUp(self):
