@@ -334,6 +334,15 @@ class test_move(unittest.TestCase):
         u = 0.5 * (u[:, :, :-1] + u[:, :, 1:])
         self.assertTrue(np.allclose(u, gvvar))
 
+    def test_ddx_twice(self):
+        gvvar = gv3('u', self.fh, **self.initializer).xep().xsm().read().dbyd(
+            3, weights='area').move_to('u').compute()
+        self.assertTrue(isinstance(gvvar.array, np.ndarray))
+        gvvar = gv3(
+            'u', self.fh, geometry=self.geometry).xep().xsm().read().dbyd(
+                3, weights='area').move_to('u').compute()
+        self.assertTrue(isinstance(gvvar.array, np.ndarray))
+
     def test_ddx_u_subset(self):
         ops = ['yep', 'xsm']
         axis = [2, 3]

@@ -316,7 +316,6 @@ class MOM6Variable(Domain):
                 self.operations.append(
                     self.BoundaryCondition(bc_type, i + 1, 0))
             if (indices[1] > self.dim_arrays[dim].size):
-                # if i != 0 or self._current_vloc != 'i':
                 if i != 0 or self._initial_dimensions[1] != 'zi':
                     bc_type = self._bc_type[loc][2 * i + 1]
                     self.operations.append(
@@ -383,6 +382,18 @@ class MOM6Variable(Domain):
             self.operations.append(move)
         return self
 
+    def implement_BC_if_necessary_for_divisor(self, divisor):
+        dims = self._final_dimensions
+        for i, dim in enumerate(dims[2:]):
+            indices = self.indices[dim]
+            if indices[0] < 0:
+                halo = np.take(divisor, [0], axis=i)
+                divisor = np.concatenate((halo, divisor), axis=i)
+            if (indices[1] > self.dim_arrays[dim].size):
+                halo = np.take(divisor, [-1], axis=i)
+                divisor = np.concatenate((divisor, halo), axis=i)
+        return divisor
+
     def dbyd(self, axis, weights=None):
         if axis > 1:
             ns, ne = self.check_possible_movements_for_move(
@@ -393,6 +404,7 @@ class MOM6Variable(Domain):
                 self._current_hloc, axis, weights=weights)
             self.get_slice_2D()
             divisor = divisor[self._slice_2D]
+            divisor = self.implement_BC_if_necessary_for_divisor(divisor)
         elif axis == 1:
             divisor = 9.8 / 1031 * np.diff(
                 self.dim_arrays[self._final_dimensions[1]][2:4])
