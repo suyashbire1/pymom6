@@ -426,7 +426,7 @@ class MOM6Variable(Domain):
             self.LazyNumpyOperation(npfunc, *args, **kwargs))
         return self
 
-    def nanmean(self, axis=[0, 1, 2, 3], keepdims=False):
+    def nanmean(self, axis=[0, 1, 2, 3], keepdims=True):
         try:
             for ax in axis:
                 axis_string = self._current_dimensions[ax]
