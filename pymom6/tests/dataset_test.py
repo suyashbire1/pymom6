@@ -28,4 +28,4 @@ def test_variable_same_from_dataset(var):
     with pymom6.Dataset2(fil2) as pdset:
         momvar = getattr(pdset, var)().read().compute() * 2
         momvar1 = getattr(pdset, var)().read().compute() * 3
-    assert not np.allclose(momvar.array, momvar1.array)
+    assert not np.all(momvar.array == momvar1.array)
