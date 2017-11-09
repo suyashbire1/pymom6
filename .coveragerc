@@ -3,4 +3,6 @@ branch = True
 source = pymom6
 
 [report]
-omit = pymom6/tests/*
+omit =
+      pymom6/tests/*
+      setup.py
