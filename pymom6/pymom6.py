@@ -563,61 +563,44 @@ class MOM6Variable(Domain):
                 and self._current_vloc == other._current_vloc)
 
     def __add__(self, other):
-        if hasattr(other, 'array') and self.match_location(other):
-            self.array += other.values
-        else:
-            self.array += other
+        to_add = other.values if (hasattr(other, 'array')
+                                  and self.match_location(other)) else other
+        self.operations.append(lambda a: a + to_add)
         return self
 
     def __radd__(self, other):
         return self.__add__(other)
 
-    def __iadd__(self, other):
-        return self.__add__(other)
-
     def __sub__(self, other):
-        if hasattr(other, 'array') and self.match_location(other):
-            self.array -= other.values
-        else:
-            self.array -= other
+        to_sub = other.values if (hasattr(other, 'array')
+                                  and self.match_location(other)) else other
+        self.operations.append(lambda a: a - to_sub)
         return self
 
     def __rsub__(self, other):
         return -self.__sub__(other)
 
-    def __isub__(self, other):
-        return self.__sub__(other)
-
     def __mul__(self, other):
-        if hasattr(other, 'array') and self.match_location(other):
-            self.array *= other.values
-        else:
-            self.array *= other
+        to_mul = other.values if (hasattr(other, 'array')
+                                  and self.match_location(other)) else other
+        self.operations.append(lambda a: a * to_mul)
         return self
 
     def __rmul__(self, other):
         return self.__mul__(other)
 
-    def __imul__(self, other):
-        return self.__mul__(other)
-
     def __truediv__(self, other):
-        if hasattr(other, 'array') and self.match_location(other):
-            self.array /= other.values
-        else:
-            self.array /= other
+        to_div = other.values if (hasattr(other, 'array')
+                                  and self.match_location(other)) else other
+        self.operations.append(lambda a: a / to_div)
         return self
 
     def __rtruediv__(self, other):
-        if hasattr(other, 'array') and self.match_location(other):
-            self.array = other.values / self.array
-        else:
-            self.array = other / self.array
+        to_div = other.values if (hasattr(other, 'array')
+                                  and self.match_location(other)) else other
+        self.operations.append(lambda a: to_div / a)
         return self
 
-    def __itruediv__(self, other):
-        return self.__truediv__(other)
-
     def __neg__(self):
-        self.array *= -1
+        self.operations.append(lambda a: a * -1)
         return self
