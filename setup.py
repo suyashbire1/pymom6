@@ -14,5 +14,6 @@ setup(
         'netCDF4',
         'numpy',
         'xarray',
+        'toolz',
     ],
     zip_safe=False)
