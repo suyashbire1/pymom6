@@ -54,7 +54,9 @@ class test_variable(unittest.TestCase):
                         **self.initializer).get_slice().read().compute().array
             with pdset(self.fil1, **self.initializer) as pdset_sub:
                 pdvar = getattr(pdset_sub,
-                                var).get_slice().read().compute().array
+                                var)().get_slice().read().compute().array
+                xh = pdset_sub.xh()
+            self.assertIsInstance(xh, np.ndarray)
             self.assertIsInstance(gvvar, np.ndarray)
             self.assertTrue(np.allclose(gvvar, pdvar))
 
@@ -70,8 +72,13 @@ class test_variable(unittest.TestCase):
     def test_multifile_array(self):
         for var in self.vars:
             gvvar = gv3(var, self.mfh,
-                        **self.initializer).get_slice().read().compute().array
-            self.assertIsInstance(gvvar, np.ndarray)
+                        **self.initializer).get_slice().read().compute()
+            self.assertIsInstance(gvvar.array, np.ndarray)
+            self.name = 'temp'
+            self.units = 'unts'
+            self.math = 'mat'
+            self.assertTrue(self.name == 'temp' and self.units == 'unts'
+                            and self.math == 'mat')
 
     def test_array_full(self):
         for var in self.vars:
@@ -79,7 +86,7 @@ class test_variable(unittest.TestCase):
             var_array = self.fh.variables[var][:]
             with pdset(self.fil1) as pdset_full:
                 pdvar = getattr(pdset_full,
-                                var).get_slice().read().compute().array
+                                var)().get_slice().read().compute().array
             self.assertTrue(np.allclose(gvvar, var_array))
             self.assertTrue(np.allclose(gvvar, pdvar))
 
@@ -223,3 +230,16 @@ class test_variable(unittest.TestCase):
         self.assertTrue(np.all(array_at_z[:, 2] == 2))
         self.assertTrue(np.all(array_at_z[:, 3] == 2))
         pass
+
+    def test_var_get_atz(self):
+        gvvar = gv3('wparam', self.fh,
+                    **self.initializer).get_slice().read().compute()
+        e = gv3('e', self.fh, **self.initializer).get_slice().read().compute()
+        array = gvvar.values
+        array[:, -1] = 123
+        gvvar.values = array
+        self.assertTrue(np.all(gvvar.array[:, -1] == 123))
+        gvvar = gvvar.toz(-2400, e).compute()
+        self.assertTrue(gvvar.array.shape[1] == 1)
+        self.assertTrue(gvvar._current_dimensions[1] == 'z')
+        self.assertTrue(np.all(gvvar.array[:, -1] == 123))

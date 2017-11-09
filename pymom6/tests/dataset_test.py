@@ -17,7 +17,7 @@ fil_list = [fil1, fil2]
 
 @pytest.mark.parametrize("fil", [fil2, fil_list])
 def test_variable_from_dataset(var, fil):
-    with pymom6.Dataset2(fil) as pdset:
+    with pymom6.Dataset(fil) as pdset:
         momvar = getattr(pdset, var)()
     assert isinstance(momvar, pymom6.MOM6Variable)
 
@@ -25,7 +25,7 @@ def test_variable_from_dataset(var, fil):
 def test_variable_same_from_dataset(var):
     path = os.path.dirname(__file__) + '/data/'
     fil2 = path + 'output__0001_12_009.nc'
-    with pymom6.Dataset2(fil2) as pdset:
+    with pymom6.Dataset(fil2) as pdset:
         momvar = getattr(pdset, var)().read().compute() * 2
         momvar1 = getattr(pdset, var)().read().compute() * 3
     assert not np.all(momvar.array == momvar1.array)

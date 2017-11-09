@@ -22,19 +22,6 @@ def Dataset(fil, **initializer):
     fh = mfdset(fil) if isinstance(fil, list) else dset(fil)
     ds = SimpleNamespace()
     for var in fh.variables:
-        try:
-            setattr(ds, var, MOM6Variable(var, fh, **initializer))
-        except AttributeError:
-            pass
-    yield ds
-    fh.close()
-
-
-@contextmanager
-def Dataset2(fil, **initializer):
-    fh = mfdset(fil) if isinstance(fil, list) else dset(fil)
-    ds = SimpleNamespace()
-    for var in fh.variables:
         setattr(ds, var, curry(variable_factory, fh, initializer, var))
     yield ds
     fh.close()
@@ -217,7 +204,7 @@ class MOM6Variable(Domain):
             self._current_vloc = 'i'
 
     def return_dimensions(self):
-        dims = self._final_dimensions
+        dims = self._current_dimensions
         return_dims = OrderedDict()
         for dim in dims:
             dim_array = self.dim_arrays[dim]
@@ -239,10 +226,11 @@ class MOM6Variable(Domain):
         hdims = loc_registry_hor[hloc]
         return tuple(['Time', vdim, *hdims])
 
-    def get_current_location_dimensions(self, loc):
-        self._current_hloc = loc[0]
-        self._current_vloc = loc[1]
-        self._current_dimensions = list(self.get_dimensions_by_location(loc))
+
+#     def get_current_location_dimensions(self, loc):
+#         self._current_hloc = loc[0]
+#         self._current_vloc = loc[1]
+#         self._current_dimensions = list(self.get_dimensions_by_location(loc))
 
     def get_final_location_dimensions(self):
         self._final_hloc = self._final_loc[0]
@@ -476,10 +464,23 @@ class MOM6Variable(Domain):
     def toz(self, z, e):
         assert self._current_hloc == e._current_hloc
         assert e._current_vloc == 'i'
+        if not isinstance(z, np.ndarray):
+            z = np.array(z) if isinstance(z, list) else np.array([z])
+        self.dim_arrays['z'] = z
+        self.indices['z'] = 0, z.size, 1
+        dims = list(self._current_dimensions)
+        dims[1] = 'z'
+        self._current_dimensions = dims
+        try:
+            fillvalue = self.fillvalue
 
-        def lazy_toz(array):
-            return self.get_var_at_z(
-                array, z, e.array, fillvalue=self.fillvalue)
+            def lazy_toz(array):
+                return self.get_var_at_z(
+                    array, z, e.array, fillvalue=fillvalue)
+        except AttributeError:
+
+            def lazy_toz(array):
+                return self.get_var_at_z(array, z, e.array)
 
         self.operations.append(lazy_toz)
         return self
@@ -548,6 +549,15 @@ class MOM6Variable(Domain):
     def units(self, units):
         assert isinstance(units, str)
         self._units = units
+
+    @property
+    def values(self):
+        return self.array
+
+    @values.setter
+    def values(self, array):
+        assert isinstance(array, np.ndarray)
+        self.array = array
 
     def match_location(self, other):
         return (self._current_hloc == other._current_hloc
