@@ -1,6 +1,5 @@
 import numpy as np
 from functools import partial, partialmethod
-from toolz import curry
 from collections import OrderedDict
 from netCDF4 import Dataset as dset, MFDataset as mfdset
 import xarray as xr
@@ -22,7 +21,7 @@ def Dataset(fil, **initializer):
     fh = mfdset(fil) if isinstance(fil, list) else dset(fil)
     ds = SimpleNamespace()
     for var in fh.variables:
-        setattr(ds, var, curry(variable_factory, fh, initializer, var))
+        setattr(ds, var, partial(variable_factory, fh, initializer, var))
     yield ds
     fh.close()
 
