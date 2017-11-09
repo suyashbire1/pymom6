@@ -300,6 +300,7 @@ class MOM6Variable(Domain):
     def divide_by(self, divisor):
         self.get_slice_2D()
         divisor = getattr(self.geometry, divisor)[self._slice_2D]
+        divisor = self.implement_BC_if_necessary_for_divisor(divisor)
         self.operations.append(lambda a: a / divisor)
         return self
 
