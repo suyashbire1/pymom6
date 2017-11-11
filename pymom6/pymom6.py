@@ -633,6 +633,10 @@ class MOM6Variable(Domain):
         self.operations.append(lambda a: to_div / a)
         return self
 
+    def __pow__(self, other):
+        self.operations.append(lambda a: a**other)
+        return self
+
     def __neg__(self):
         self.operations.append(lambda a: a * -1)
         return self
