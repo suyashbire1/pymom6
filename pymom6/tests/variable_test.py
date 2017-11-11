@@ -54,8 +54,8 @@ class test_variable(unittest.TestCase):
                         **self.initializer).get_slice().read().compute().array
             with pdset(self.fil1, **self.initializer) as pdset_sub:
                 pdvar = getattr(pdset_sub,
-                                var)().get_slice().read().compute().array
-                xh = pdset_sub.xh()
+                                var).get_slice().read().compute().array
+                xh = pdset_sub.xh
             self.assertIsInstance(xh, np.ndarray)
             self.assertIsInstance(gvvar, np.ndarray)
             self.assertTrue(np.allclose(gvvar, pdvar))
@@ -86,7 +86,7 @@ class test_variable(unittest.TestCase):
             var_array = self.fh.variables[var][:]
             with pdset(self.fil1) as pdset_full:
                 pdvar = getattr(pdset_full,
-                                var)().get_slice().read().compute().array
+                                var).get_slice().read().compute().array
             self.assertTrue(np.allclose(gvvar, var_array))
             self.assertTrue(np.allclose(gvvar, pdvar))
 

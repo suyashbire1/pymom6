@@ -4,8 +4,6 @@ from collections import OrderedDict
 from netCDF4 import Dataset as dset, MFDataset as mfdset
 import xarray as xr
 from numba import jit
-from contextlib import contextmanager
-from types import SimpleNamespace
 
 
 def variable_factory(fh, initializer, var):
@@ -16,14 +14,26 @@ def variable_factory(fh, initializer, var):
     return variable
 
 
-@contextmanager
-def Dataset(fil, **initializer):
-    fh = mfdset(fil) if isinstance(fil, list) else dset(fil)
-    ds = SimpleNamespace()
-    for var in fh.variables:
-        setattr(ds, var, partial(variable_factory, fh, initializer, var))
-    yield ds
-    fh.close()
+class Dataset():
+    def __init__(self, filename, **initializer):
+        self.filename = filename
+        self.initializer = initializer
+        self.fh = None
+
+    def __enter__(self):
+        fil = self.filename
+        self.fh = mfdset(fil) if isinstance(fil, list) else dset(fil)
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.fh.close()
+        self.fh = None
+
+    def __getattr__(self, name):
+        if self.fh is not None:
+            return variable_factory(self.fh, self.initializer, name)
+        else:
+            raise AttributeError(f'{self.filename!r} is not open.')
 
 
 class GridGeometry():

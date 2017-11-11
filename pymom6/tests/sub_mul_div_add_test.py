@@ -9,10 +9,10 @@ def test_sub():
     path = os.path.dirname(__file__) + '/data/'
     fil2 = path + 'output__0001_12_009.nc'
     with pymom6.Dataset(fil2) as pdset:
-        momvar = getattr(pdset, var)().read() - 2
+        momvar = getattr(pdset, var).read() - 2
         momvar = momvar.compute()
-        momvar1 = getattr(pdset, var)().read().compute()
-        momvar3 = getattr(pdset, var)().read().compute()
+        momvar1 = getattr(pdset, var).read().compute()
+        momvar3 = getattr(pdset, var).read().compute()
     assert np.all(momvar.array == -(2 - momvar1).compute().array)
     assert np.allclose((momvar3 - momvar).compute().array, 2.0)
 
@@ -22,10 +22,10 @@ def test_mul():
     path = os.path.dirname(__file__) + '/data/'
     fil2 = path + 'output__0001_12_009.nc'
     with pymom6.Dataset(fil2) as pdset:
-        momvar = getattr(pdset, var)().read() * 2
+        momvar = getattr(pdset, var).read() * 2
         momvar = momvar.compute()
-        momvar1 = getattr(pdset, var)().read().compute()
-        momvar3 = getattr(pdset, var)().read().compute()
+        momvar1 = getattr(pdset, var).read().compute()
+        momvar3 = getattr(pdset, var).read().compute()
         temp = (momvar3 / momvar).compute().array
         temp = temp[np.isfinite(temp)]
     assert np.all(momvar.array == (2 * momvar1).compute().array)
@@ -37,10 +37,10 @@ def test_div():
     path = os.path.dirname(__file__) + '/data/'
     fil2 = path + 'output__0001_12_009.nc'
     with pymom6.Dataset(fil2) as pdset:
-        momvar = getattr(pdset, var)().read() / 2
+        momvar = getattr(pdset, var).read() / 2
         momvar = momvar.compute()
-        momvar1 = getattr(pdset, var)().read().compute()
-        momvar3 = getattr(pdset, var)().read().compute()
+        momvar1 = getattr(pdset, var).read().compute()
+        momvar3 = getattr(pdset, var).read().compute()
         temp = (momvar3 / momvar).compute().array
         temp = temp[np.isfinite(temp)]
     assert np.all(momvar1.array == (2 * momvar).compute().array)
@@ -52,10 +52,10 @@ def test_add():
     path = os.path.dirname(__file__) + '/data/'
     fil2 = path + 'output__0001_12_009.nc'
     with pymom6.Dataset(fil2) as pdset:
-        momvar = getattr(pdset, var)().read() + 2
+        momvar = getattr(pdset, var).read() + 2
         momvar = momvar.compute()
-        momvar1 = getattr(pdset, var)().read().compute()
-        momvar3 = getattr(pdset, var)().read().compute()
+        momvar1 = getattr(pdset, var).read().compute()
+        momvar3 = getattr(pdset, var).read().compute()
 
     assert np.all(momvar.array == (2 + momvar1).compute().array)
     assert np.allclose((momvar3 - momvar).compute().array, -2.0)
