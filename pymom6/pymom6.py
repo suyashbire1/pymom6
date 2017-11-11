@@ -180,10 +180,10 @@ class MOM6Variable(Domain):
         self._current_dimensions = self._initial_dimensions
         self.determine_location()
         initializer['fh'] = fh
+        Domain.__init__(self, **initializer)
         self.polish(**initializer)
 
     def polish(self, **initializer):
-        Domain.__init__(self, **initializer)
         final_loc = initializer.get('final_loc', None)
         if final_loc:
             self._final_loc = final_loc
