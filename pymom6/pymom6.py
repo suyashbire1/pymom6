@@ -198,6 +198,7 @@ class MOM6Variable(Domain):
         self._math = initializer.get('math', None)
         self.array = None
         self.operations = []
+        return self
 
     def determine_location(self):
         dims = self._current_dimensions
