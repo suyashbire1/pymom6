@@ -4,6 +4,8 @@ from collections import OrderedDict
 from netCDF4 import Dataset as dset, MFDataset as mfdset
 import xarray as xr
 from numba import jit
+import copy
+import copy
 
 
 def variable_factory(fh, initializer, var):
@@ -597,8 +599,9 @@ class MOM6Variable(Domain):
     def __add__(self, other):
         to_add = other.values if (hasattr(other, 'array')
                                   and self.match_location(other)) else other
-        self.operations.append(lambda a: a + to_add)
-        return self
+        new = copy.copy(self)
+        new.operations.append(lambda a: a + to_add)
+        return new
 
     def __radd__(self, other):
         return self.__add__(other)
@@ -606,8 +609,9 @@ class MOM6Variable(Domain):
     def __sub__(self, other):
         to_sub = other.values if (hasattr(other, 'array')
                                   and self.match_location(other)) else other
-        self.operations.append(lambda a: a - to_sub)
-        return self
+        new = copy.copy(self)
+        new.operations.append(lambda a: a - to_sub)
+        return new
 
     def __rsub__(self, other):
         return -self.__sub__(other)
@@ -615,8 +619,9 @@ class MOM6Variable(Domain):
     def __mul__(self, other):
         to_mul = other.values if (hasattr(other, 'array')
                                   and self.match_location(other)) else other
-        self.operations.append(lambda a: a * to_mul)
-        return self
+        new = copy.copy(self)
+        new.operations.append(lambda a: a * to_mul)
+        return new
 
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -624,19 +629,23 @@ class MOM6Variable(Domain):
     def __truediv__(self, other):
         to_div = other.values if (hasattr(other, 'array')
                                   and self.match_location(other)) else other
-        self.operations.append(lambda a: a / to_div)
-        return self
+        new = copy.copy(self)
+        new.operations.append(lambda a: a / to_div)
+        return new
 
     def __rtruediv__(self, other):
         to_div = other.values if (hasattr(other, 'array')
                                   and self.match_location(other)) else other
-        self.operations.append(lambda a: to_div / a)
-        return self
+        new = copy.copy(self)
+        new.operations.append(lambda a: to_div / a)
+        return new
 
     def __pow__(self, other):
-        self.operations.append(lambda a: a**other)
-        return self
+        new = copy.copy(self)
+        new.operations.append(lambda a: a**other)
+        return new
 
     def __neg__(self):
-        self.operations.append(lambda a: a * -1)
-        return self
+        new = copy.copy(self)
+        new.operations.append(lambda a: a * -1)
+        return new
