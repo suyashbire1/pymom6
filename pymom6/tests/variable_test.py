@@ -74,11 +74,12 @@ class test_variable(unittest.TestCase):
             gvvar = gv3(var, self.mfh,
                         **self.initializer).get_slice().read().compute()
             self.assertIsInstance(gvvar.array, np.ndarray)
-            self.name = 'temp'
-            self.units = 'unts'
-            self.math = 'mat'
-            self.assertTrue(self.name == 'temp' and self.units == 'unts'
-                            and self.math == 'mat')
+            gvvar.name = 'temp'
+            gvvar.units = 'unts'
+            gvvar.math = 'mat'
+            gvvar.vloc = 'i'
+            self.assertTrue(gvvar.vloc == 'i' and gvvar.name == 'temp'
+                            and gvvar.units == 'unts' and gvvar.math == 'mat')
 
     def test_array_full(self):
         for var in self.vars:

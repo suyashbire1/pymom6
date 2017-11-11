@@ -529,6 +529,11 @@ class MOM6Variable(Domain):
     def vloc(self):
         return self._current_vloc
 
+    @vloc.setter
+    def vloc(self, loc):
+        assert loc in ['l', 'i']
+        self._current_vloc = loc
+
     @property
     def shape(self):
         return self.array.shape if hasattr(self, 'array') else None
