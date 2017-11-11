@@ -433,6 +433,14 @@ class MOM6Variable(Domain):
     LazyNumpyOperation = LazyNumpyOperation
 
     def np_ops(self, npfunc, *args, **kwargs):
+        sets_hloc = kwargs.get('sets_hloc', None)
+        sets_vloc = kwargs.get('sets_vloc', None)
+        if sets_hloc:
+            self.hloc = sets_hloc
+            kwargs.pop('sets_hloc')
+        if sets_vloc:
+            self.vloc = sets_vloc
+            kwargs.pop('sets_vloc')
         self.operations.append(
             self.LazyNumpyOperation(npfunc, *args, **kwargs))
         return self
@@ -524,6 +532,11 @@ class MOM6Variable(Domain):
     @property
     def hloc(self):
         return self._current_hloc
+
+    @hloc.setter
+    def hloc(self, loc):
+        assert loc in ['u', 'v', 'h', 'q']
+        self._current_hloc = loc
 
     @property
     def vloc(self):

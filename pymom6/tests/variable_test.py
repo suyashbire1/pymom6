@@ -78,8 +78,14 @@ class test_variable(unittest.TestCase):
             gvvar.units = 'unts'
             gvvar.math = 'mat'
             gvvar.vloc = 'i'
-            self.assertTrue(gvvar.vloc == 'i' and gvvar.name == 'temp'
-                            and gvvar.units == 'unts' and gvvar.math == 'mat')
+            gvvar.hloc = 'u'
+            self.assertTrue(gvvar.hloc == 'u' and gvvar._current_vloc == 'i'
+                            and gvvar.name == 'temp' and gvvar.units == 'unts'
+                            and gvvar.math == 'mat')
+            gvvar.vloc = 'l'
+            gvvar.hloc = 'v'
+            self.assertTrue(gvvar._current_hloc == 'v'
+                            and gvvar._current_vloc == 'l')
 
     def test_array_full(self):
         for var in self.vars:
@@ -114,6 +120,16 @@ class test_variable(unittest.TestCase):
             var_array = np.mean(var_array, keepdims=True)
             self.assertTrue(
                 np.allclose(gvvar, var_array), msg=f'{gvvar,var_array}')
+
+    def test_numpy_func_with_move(self):
+        gvvar = gv3(
+            'e', self.fh, fillvalue=0,
+            final_loc='hl').zep().get_slice().read().np_ops(
+                np.diff, axis=1, sets_vloc='l').compute()
+        var_array = self.fh.variables['e'][:]
+        var_array = np.diff(var_array, axis=1)
+        self.assertTrue(np.allclose(gvvar.array, var_array))
+        self.assertTrue(gvvar.vloc == 'l')
 
     def test_boundary_conditions(self):
         for var in self.vars:
