@@ -9,7 +9,7 @@ from numba import jit
 def variable_factory(fh, initializer, var):
     try:
         variable = MOM6Variable(var, fh, **initializer)
-    except AttributeError:
+    except TypeError:
         variable = fh.variables[var][:]
     return variable
 
@@ -174,8 +174,10 @@ class MOM6Variable(Domain):
     def __init__(self, var, fh, **initializer):
         self._name = initializer.get('name', var)
         self._v = fh.variables[var]
+        if len(self._v.dimensions) == 1 or 'nv' in self._v.dimensions:
+            raise TypeError('Not a MOM6variable')
         self._initial_dimensions = list(self._v.dimensions)
-        self._current_dimensions = list(self._v.dimensions)
+        self._current_dimensions = self._initial_dimensions
         self.determine_location()
         initializer['fh'] = fh
         self.polish(**initializer)
