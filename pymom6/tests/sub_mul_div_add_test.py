@@ -85,13 +85,23 @@ def test_rtruediv():
     assert np.all(momvar.array == 1 / momvar1.array)
 
 
-def test_mul_view_or_copy():
+def test_add_mul_view_or_copy():
     path = os.path.dirname(__file__) + '/data/'
     fil2 = path + 'output__0001_12_009.nc'
     with pymom6.Dataset(fil2) as pdset:
         momvar = pdset.u.read().compute()
         momvar1 = pdset.u.read().compute()
+        momvar2 = pdset.u.read().compute()
         assert id(momvar) != id(momvar1)
-        momvar3 = momvar * momvar1
+        assert id(momvar) != id(momvar2)
+        assert id(momvar1) != id(momvar2)
+        momvar3 = (momvar * momvar1 * momvar2)
+        momvar3.name = '3'
         momvar3 = momvar3.compute()
+        momvar4 = (momvar + momvar1 + momvar2)
+        momvar4.name = '4'
+        momvar4 = momvar4.compute()
         assert np.any(momvar3.array != momvar.array)
+        assert id(momvar3.array) != id(momvar.array)
+        assert np.any(momvar4.array != momvar.array)
+        assert id(momvar4.array) != id(momvar.array)

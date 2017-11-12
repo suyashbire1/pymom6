@@ -60,6 +60,12 @@ class test_variable(unittest.TestCase):
             self.assertIsInstance(gvvar, np.ndarray)
             self.assertTrue(np.allclose(gvvar, pdvar))
 
+    def test_array_check_loc(self):
+        gvvar = gv3(
+            'u', self.fh, final_loc='vl',
+            **self.initializer).read().compute(check_loc=False)
+        self.assertIsInstance(gvvar.array, np.ndarray)
+
     def test_array_divideby(self):
         for var in self.vars:
             gvvar = gv3(var, self.fh,

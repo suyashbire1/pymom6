@@ -506,12 +506,13 @@ class MOM6Variable(Domain):
         self.operations.append(lazy_toz)
         return self
 
-    def compute(self):
+    def compute(self, check_loc=True):
         for ops in self.operations:
             self.array = ops(self.array)
         self.operations = []
-        assert self._current_hloc == self._final_hloc
-        assert self._current_vloc == self._final_vloc
+        if check_loc:
+            assert self._current_hloc == self._final_hloc
+            assert self._current_vloc == self._final_vloc
         return self
 
     def to_DataArray(self):
