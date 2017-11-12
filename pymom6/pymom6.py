@@ -239,7 +239,6 @@ class MOM6Variable(Domain):
         hdims = loc_registry_hor[hloc]
         return tuple(['Time', vdim, *hdims])
 
-
 #     def get_current_location_dimensions(self, loc):
 #         self._current_hloc = loc[0]
 #         self._current_vloc = loc[1]
@@ -519,12 +518,20 @@ class MOM6Variable(Domain):
         if len(self.operations) is not 0:
             self.compute()
         coords = self.return_dimensions()
-        dims = list(self._final_dimensions)
-        for i, (coord, value) in enumerate(list(coords.items())):
-            if not isinstance(value, np.ndarray):
-                coords.pop(coord)
-                dims.pop(i)
-        da = xr.DataArray(self.array.squeeze(), coords=coords, dims=dims)
+        coords_squeezed = {}
+        dims_squeezed = []
+        for i, (coord, value) in enumerate(coords.items()):
+            if isinstance(value, np.ndarray):
+                coords_squeezed[coord] = value
+                dims_squeezed.append(coord)
+
+
+#        for i, (coord, value) in enumerate(list(coords.items())):
+#            if not isinstance(value, np.ndarray):
+#                coords.pop(coord)
+#                dims.pop(i)
+        da = xr.DataArray(
+            self.array.squeeze(), coords=coords_squeezed, dims=dims_squeezed)
         da.name = self._name
         if self._math:
             da.attrs['math'] = self._math

@@ -239,6 +239,11 @@ class test_variable(unittest.TestCase):
                     axis=0).to_DataArray()
             self.assertIsInstance(gvvar, xr.DataArray)
             self.assertTrue(len(gvvar.shape) == 3)
+            gvvar = gv3(var, self.fh,
+                        **self.initializer).get_slice().read().nanmean(
+                            axis=(0, 2)).to_DataArray()
+            self.assertIsInstance(gvvar, xr.DataArray)
+            self.assertTrue(len(gvvar.shape) == 2)
 
     def test_get_var_at_z(self):
         array = np.full((1, 3, 5, 5), 1)
