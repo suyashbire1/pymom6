@@ -232,6 +232,14 @@ class test_variable(unittest.TestCase):
             self.assertTrue(gvvar.attrs['math'] == '1')
             self.assertTrue(gvvar.attrs['units'] == 'm')
 
+    def test_xarray_dimensions(self):
+        for var in self.vars:
+            gvvar = gv3(
+                var, self.fh, **self.initializer).get_slice().read().nanmean(
+                    axis=0).to_DataArray()
+            self.assertIsInstance(gvvar, xr.DataArray)
+            self.assertTrue(len(gvvar.shape) == 3)
+
     def test_get_var_at_z(self):
         array = np.full((1, 3, 5, 5), 1)
         array[:, 0, :, :] = 2

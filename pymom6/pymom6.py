@@ -5,7 +5,6 @@ from netCDF4 import Dataset as dset, MFDataset as mfdset
 import xarray as xr
 from numba import jit
 import copy
-import copy
 
 
 def variable_factory(fh, initializer, var):
@@ -519,10 +518,13 @@ class MOM6Variable(Domain):
     def to_DataArray(self):
         if len(self.operations) is not 0:
             self.compute()
-        da = xr.DataArray(
-            self.array,
-            coords=self.return_dimensions(),
-            dims=self._final_dimensions)
+        coords = self.return_dimensions()
+        dims = list(self._final_dimensions)
+        for i, (coord, value) in enumerate(list(coords.items())):
+            if not isinstance(value, np.ndarray):
+                coords.pop(coord)
+                dims.pop(i)
+        da = xr.DataArray(self.array.squeeze(), coords=coords, dims=dims)
         da.name = self._name
         if self._math:
             da.attrs['math'] = self._math
