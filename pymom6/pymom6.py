@@ -515,9 +515,9 @@ class MOM6Variable(Domain):
             assert self._current_vloc == self._final_vloc
         return self
 
-    def to_DataArray(self):
+    def to_DataArray(self, check_loc=True):
         if len(self.operations) is not 0:
-            self.compute()
+            self.compute(check_loc=check_loc)
         coords = self.return_dimensions()
         coords_squeezed = {}
         dims_squeezed = []
