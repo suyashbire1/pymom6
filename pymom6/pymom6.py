@@ -182,6 +182,7 @@ class MOM6Variable(Domain):
         self.determine_location()
         initializer['fh'] = fh
         Domain.__init__(self, **initializer)
+        self.array = None
         self.polish(**initializer)
 
     def polish(self, **initializer):
@@ -197,7 +198,6 @@ class MOM6Variable(Domain):
         self.geometry = initializer.get('geometry', None)
         self._units = initializer.get('units', None)
         self._math = initializer.get('math', None)
-        self.array = None
         self.operations = []
         return self
 
