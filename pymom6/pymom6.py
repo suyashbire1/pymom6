@@ -73,12 +73,21 @@ def find_index_limits(dimension, start, end):
 def get_extremes(obj, dim_str, low, high, **initializer):
     initialize_indices_and_dim_arrays(obj)
     fh = initializer.get('fh')
-    stride = initializer.get('stride' + dim_str[0].lower(), 1)
+    axis_str = dim_str[0].lower()
+    stride = initializer.get('stride' + axis_str, 1)
+    by_index = initializer.get('by_index', False)
     try:
         dimension = fh.variables[dim_str][:]
-        low = initializer.get(low, dimension[0])
-        high = initializer.get(high, dimension[-1])
-        obj.indices[dim_str] = *find_index_limits(dimension, low, high), stride
+        if by_index:
+            obj.indices[dim_str] = initializer.get('s' + axis_str,
+                                                   0), initializer.get(
+                                                       'e' + axis_str,
+                                                       dimension.size), stride
+        else:
+            low = initializer.get(low, dimension[0])
+            high = initializer.get(high, dimension[-1])
+            obj.indices[dim_str] = *find_index_limits(dimension, low,
+                                                      high), stride
         obj.dim_arrays[dim_str] = dimension
     except KeyError:
         pass
@@ -130,6 +139,33 @@ class LazyNumpyOperation():
 
     def __call__(self, array):
         return self.func(array, *self.args, **self.kwargs)
+
+
+class CallableNanmean():
+    def __init__(self,
+                 axis,
+                 current_dimensions,
+                 dim_arrays,
+                 indices,
+                 keepdims=True):
+        self.axis = axis
+        self.current_dimensions = current_dimensions
+        self.dim_arrays = dim_arrays
+        self.indices = indices
+        self.keepdims = keepdims
+        try:
+            for ax in axis:
+                axis_string = self._current_dimensions[ax]
+                self.dim_arrays[axis_string] = np.mean(
+                    self.dim_arrays[axis_string])
+                self.indices.pop(axis_string)
+        except TypeError:
+            axis_string = self._current_dimensions[axis]
+            self.dim_arrays[axis_string] = np.mean(
+                self.dim_arrays[axis_string])
+
+    def __call__(self, array):
+        return np.nanmean(array, axis=self.axis, keepdims=self.keepdims)
 
 
 class BoundaryCondition():

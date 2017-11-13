@@ -19,6 +19,8 @@ class test_domain(unittest.TestCase):
             north_lat=self.nlat,
             west_lon=self.wlon,
             east_lon=self.elon)
+        self.initializer2 = dict(
+            fh=self.fh, st=0, sz=0, sy=10, ey=20, sx=5, ex=25, by_index=True)
 
     def tearDown(self):
         self.fh.close()
@@ -137,5 +139,28 @@ class test_domain(unittest.TestCase):
             var = 'x' + loc
             lon = self.fh.variables[var][:]
             lon_restricted = lon[(lon >= self.wlon) & (lon <= self.elon)]
+            a, b, c = domain.indices[var]
+            self.assertTrue(np.allclose(lon_restricted, lon[a:b:c]))
+
+    def test_domain_by_index(self):
+        zl = self.fh.variables['zl'][:]
+        zi = self.fh.variables['zi'][:]
+        Time = self.fh.variables['Time'][:]
+        domain = pymom6.Domain(**self.initializer2)
+        self.assertEqual(domain.indices['Time'], (0, len(Time), 1))
+        self.assertEqual(domain.indices['zl'], (0, len(zl), 1))
+        self.assertEqual(domain.indices['zi'], (0, len(zi), 1))
+        for loc in ['h', 'q']:
+            var = 'y' + loc
+            lat = self.fh.variables[var][:]
+            lat_restricted = lat[self.initializer2['sy']:self.initializer2[
+                'ey']]
+            a, b, c = domain.indices[var]
+            self.assertTrue(np.allclose(lat_restricted, lat[a:b:c]))
+
+            var = 'x' + loc
+            lon = self.fh.variables[var][:]
+            lon_restricted = lon[self.initializer2['sx']:self.initializer2[
+                'ex']]
             a, b, c = domain.indices[var]
             self.assertTrue(np.allclose(lon_restricted, lon[a:b:c]))
