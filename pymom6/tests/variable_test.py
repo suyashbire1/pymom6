@@ -274,8 +274,9 @@ class test_variable(unittest.TestCase):
             gvvar = gv3(
                 var, self.fh, **self.initializer).get_slice().read().nanmean(
                     axis=0).to_DataArray()
+            shp = gvvar.shape
             self.assertIsInstance(gvvar, xr.DataArray)
-            self.assertTrue(len(gvvar.shape) == 3)
+            self.assertTrue(len(shp) == 3)
             gvvar = gv3(var, self.fh,
                         **self.initializer).get_slice().read().nanmean(
                             axis=(0, 2)).to_DataArray()
@@ -307,6 +308,6 @@ class test_variable(unittest.TestCase):
         gvvar.values = array
         self.assertTrue(np.all(gvvar.array[:, -1] == 123))
         gvvar = gvvar.toz(-2400, e).compute()
-        self.assertTrue(gvvar.array.shape[1] == 1)
+        self.assertTrue(gvvar.shape[1] == 1)
         self.assertTrue(gvvar._current_dimensions[1] == 'z')
         self.assertTrue(np.all(gvvar.array[:, -1] == 123))
