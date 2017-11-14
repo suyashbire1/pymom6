@@ -141,33 +141,6 @@ class LazyNumpyOperation():
         return self.func(array, *self.args, **self.kwargs)
 
 
-class CallableNanmean():
-    def __init__(self,
-                 axis,
-                 current_dimensions,
-                 dim_arrays,
-                 indices,
-                 keepdims=True):
-        self.axis = axis
-        self.current_dimensions = current_dimensions
-        self.dim_arrays = dim_arrays
-        self.indices = indices
-        self.keepdims = keepdims
-        try:
-            for ax in axis:
-                axis_string = self._current_dimensions[ax]
-                self.dim_arrays[axis_string] = np.mean(
-                    self.dim_arrays[axis_string])
-                self.indices.pop(axis_string)
-        except TypeError:
-            axis_string = self._current_dimensions[axis]
-            self.dim_arrays[axis_string] = np.mean(
-                self.dim_arrays[axis_string])
-
-    def __call__(self, array):
-        return np.nanmean(array, axis=self.axis, keepdims=self.keepdims)
-
-
 class BoundaryCondition():
     def __init__(self, bc_type, axis, start_or_end):
         self.bc_type = bc_type
@@ -473,13 +446,28 @@ class MOM6Variable(Domain):
 
     def np_ops(self, npfunc, *args, **kwargs):
         sets_hloc = kwargs.get('sets_hloc', None)
-        sets_vloc = kwargs.get('sets_vloc', None)
         if sets_hloc:
+            axis = kwargs.get('axis', None)
+            ns = kwargs.get('ns', None)
+            ne = kwargs.get('ne', None)
+            if ns:
+                self.modify_index(axis, 0, ns)
+                kwargs.pop('ns')
+            if ne:
+                self.modify_index(axis, 1, ne)
+                kwargs.pop('ne')
             self.hloc = sets_hloc
             kwargs.pop('sets_hloc')
+        sets_vloc = kwargs.get('sets_vloc', None)
         if sets_vloc:
-            self.vloc = sets_vloc
-            kwargs.pop('sets_vloc')
+            self.modify_index(1, 1, -1)
+            if self._current_vloc == 'l' and sets_vloc == 'i':
+                self.modify_index(1, 0, 1)
+                self.vloc = sets_vloc
+                kwargs.pop('sets_vloc')
+            elif self._current_vloc == 'i' and sets_vloc == 'l':
+                self.vloc = sets_vloc
+                kwargs.pop('sets_vloc')
         self.operations.append(
             self.LazyNumpyOperation(npfunc, *args, **kwargs))
         return self
@@ -495,6 +483,7 @@ class MOM6Variable(Domain):
             axis_string = self._current_dimensions[axis]
             self.dim_arrays[axis_string] = np.mean(
                 self.dim_arrays[axis_string])
+            self.indices.pop(axis_string)
 
         def meanfunc(array):
             return np.nanmean(array, axis=axis, keepdims=keepdims)
@@ -588,6 +577,8 @@ class MOM6Variable(Domain):
     def hloc(self, loc):
         assert loc in ['u', 'v', 'h', 'q']
         self._current_hloc = loc
+        self._current_dimensions = self.get_dimensions_by_location(
+            self._current_hloc + self._current_vloc)
 
     @property
     def vloc(self):
@@ -597,6 +588,8 @@ class MOM6Variable(Domain):
     def vloc(self, loc):
         assert loc in ['l', 'i']
         self._current_vloc = loc
+        self._current_dimensions = self.get_dimensions_by_location(
+            self._current_hloc + self._current_vloc)
 
     @property
     def shape(self):

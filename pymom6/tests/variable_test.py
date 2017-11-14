@@ -1,3 +1,7 @@
+import sys
+import os
+myPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, myPath + '/../')
 # from pymom6 import pymom6
 import pymom6
 from netCDF4 import Dataset as dset, MFDataset as mfdset
@@ -129,13 +133,26 @@ class test_variable(unittest.TestCase):
 
     def test_numpy_func_with_move(self):
         gvvar = gv3(
-            'e', self.fh, fillvalue=0,
-            final_loc='hl').zep().get_slice().read().np_ops(
+            'e', self.fh, fillvalue=0, final_loc='hl').zep().read().np_ops(
                 np.diff, axis=1, sets_vloc='l').compute()
         var_array = self.fh.variables['e'][:]
         var_array = np.diff(var_array, axis=1)
         self.assertTrue(np.allclose(gvvar.array, var_array))
         self.assertTrue(gvvar.vloc == 'l')
+
+    def test_numpy_func_with_move_wparam(self):
+        gvvar = gv3(
+            'wparam', self.fh, fillvalue=0,
+            final_loc='hi').zsm().zep().read().np_ops(
+                np.diff, axis=1, sets_vloc='i').compute()
+        zi = self.fh.variables['zi'][:]
+        var_array = self.fh.variables['wparam'][:]
+        var_array = np.concatenate(
+            (var_array[:, :1], var_array, -var_array[:, -1:]), axis=1)
+        var_array = np.diff(var_array, axis=1)
+        self.assertTrue(gvvar.vloc == 'i')
+        self.assertTrue(np.allclose(gvvar.array, var_array))
+        self.assertTrue(np.allclose(gvvar.dimensions['zi'], zi))
 
     def test_boundary_conditions(self):
         for var in self.vars:
@@ -185,7 +202,8 @@ class test_variable(unittest.TestCase):
             gvvar = (gv3(var, self.fh).get_slice().read()
                      .nanmean(axis=(0, 1)).compute())
             dims = gvvar.dimensions
-            self.assertTrue(list(dims.items())[0][1].size == 1)
+            #self.assertTrue(list(dims.items())[0][1].size == 1)
+            self.assertTrue(dims['Time'].size == 1)
             self.assertTrue(list(dims.items())[1][1].size == 1)
             var_array = self.fh.variables[var][:]
             if np.ma.isMaskedArray(var_array):
