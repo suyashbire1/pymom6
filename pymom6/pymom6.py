@@ -577,8 +577,9 @@ class MOM6Variable(Domain):
     def hloc(self, loc):
         assert loc in ['u', 'v', 'h', 'q']
         self._current_hloc = loc
-        self._current_dimensions = self.get_dimensions_by_location(
-            self._current_hloc + self._current_vloc)
+        self._current_dimensions = list(
+            self.get_dimensions_by_location(self._current_hloc +
+                                            self._current_vloc))
 
     @property
     def vloc(self):
@@ -588,8 +589,9 @@ class MOM6Variable(Domain):
     def vloc(self, loc):
         assert loc in ['l', 'i']
         self._current_vloc = loc
-        self._current_dimensions = self.get_dimensions_by_location(
-            self._current_hloc + self._current_vloc)
+        self._current_dimensions = list(
+            self.get_dimensions_by_location(self._current_hloc +
+                                            self._current_vloc))
 
     @property
     def shape(self):
