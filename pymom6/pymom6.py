@@ -446,20 +446,20 @@ class MOM6Variable(Domain):
 
     def np_ops(self, npfunc, *args, **kwargs):
         sets_hloc = kwargs.get('sets_hloc', None)
-        if sets_hloc:
+        if sets_hloc is not None:
             axis = kwargs.get('axis', None)
             ns = kwargs.get('ns', None)
             ne = kwargs.get('ne', None)
-            if ns:
+            if ns is not None:
                 self.modify_index(axis, 0, ns)
                 kwargs.pop('ns')
-            if ne:
+            if ne is not None:
                 self.modify_index(axis, 1, ne)
                 kwargs.pop('ne')
             self.hloc = sets_hloc
             kwargs.pop('sets_hloc')
         sets_vloc = kwargs.get('sets_vloc', None)
-        if sets_vloc:
+        if sets_vloc is not None:
             self.modify_index(1, 1, -1)
             if self._current_vloc == 'l' and sets_vloc == 'i':
                 self.modify_index(1, 0, 1)

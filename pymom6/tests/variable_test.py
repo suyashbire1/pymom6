@@ -2,7 +2,6 @@ import sys
 import os
 myPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, myPath + '/../')
-# from pymom6 import pymom6
 import pymom6
 from netCDF4 import Dataset as dset, MFDataset as mfdset
 import numpy as np
@@ -153,6 +152,20 @@ class test_variable(unittest.TestCase):
         self.assertTrue(gvvar.vloc == 'i')
         self.assertTrue(np.allclose(gvvar.array, var_array))
         self.assertTrue(np.allclose(gvvar.dimensions['zi'], zi))
+
+    def test_numpy_func_with_move_wparam_u(self):
+        gvvar = gv3('wparam', self.fh, fillvalue=0).read().compute()
+        gvvar = gvvar.np_ops(
+            np.take,
+            np.arange(0, gvvar.shape[3] - 1),
+            axis=3,
+            sets_hloc='h',
+            ns=0,
+            ne=-1).compute()
+        var_array = self.fh.variables['wparam'][:, :, :, :-1]
+        xh = self.fh.variables['xh'][:]
+        self.assertTrue(np.allclose(gvvar.array, var_array))
+        self.assertTrue(np.allclose(gvvar.dimensions['xh'], xh[:-1]))
 
     def test_boundary_conditions(self):
         for var in self.vars:
