@@ -45,14 +45,22 @@ class GridGeometry():
 
     def get_divisor_for_diff(self, loc, axis, weights=None):
         axis = axis - 2
+        #        divisors = dict(
+        #            u=['dyBu', 'dxT'],
+        #            v=['dyT', 'dxBu'],
+        #            h=['dyCv', 'dxCu'],
+        #            q=['dyCu', 'dxCv'])
+        #        if weights == 'area':
+        #            divisors['u'] = ['Aq', 'Ah']
+        #            divisors['v'] = ['Ah', 'Aq']
         divisors = dict(
-            u=['dyBu', 'dxT'],
-            v=['dyT', 'dxBu'],
-            h=['dyCv', 'dxCu'],
-            q=['dyCu', 'dxCv'])
+            u=['dyCu', 'dxCu'],
+            v=['dyCv', 'dxCv'],
+            h=['dyT', 'dxT'],
+            q=['dyBu', 'dxBu'])
         if weights == 'area':
-            divisors['u'] = ['Aq', 'Ah']
-            divisors['v'] = ['Ah', 'Aq']
+            divisors['h'] = ['Ah', 'Ah']
+            divisors['q'] = ['Aq', 'Aq']
         return getattr(self, divisors[loc][axis])
 
 
@@ -319,12 +327,14 @@ class MOM6Variable(Domain):
         self.implement_BC_if_necessary()
         return self
 
-    def divide_by(self, divisor):
+    def multiply_by(self, multiplier, power=1):
         self.get_slice_2D()
-        divisor = getattr(self.geometry, divisor)[self._slice_2D]
-        divisor = self.implement_BC_if_necessary_for_divisor(divisor)
-        self.operations.append(lambda a: a / divisor)
+        multiplier = getattr(self.geometry, multiplier)[self._slice_2D]**power
+        multiplier = self.implement_BC_if_necessary_for_multiplier(multiplier)
+        self.operations.append(lambda a: a * multiplier)
         return self
+
+    divide_by = partialmethod(multiply_by, power=-1)
 
     BoundaryCondition = BoundaryCondition
     _default_bc_type = dict(
@@ -411,17 +421,17 @@ class MOM6Variable(Domain):
             self.operations.append(move)
         return self
 
-    def implement_BC_if_necessary_for_divisor(self, divisor):
+    def implement_BC_if_necessary_for_multiplier(self, multiplier):
         dims = self._final_dimensions
         for i, dim in enumerate(dims[2:]):
             indices = self.indices[dim]
             if indices[0] < 0:
-                halo = np.take(divisor, [0], axis=i)
-                divisor = np.concatenate((halo, divisor), axis=i)
+                halo = np.take(multiplier, [0], axis=i)
+                multiplier = np.concatenate((halo, multiplier), axis=i)
             if (indices[1] > self.dim_arrays[dim].size):
-                halo = np.take(divisor, [-1], axis=i)
-                divisor = np.concatenate((divisor, halo), axis=i)
-        return divisor
+                halo = np.take(multiplier, [-1], axis=i)
+                multiplier = np.concatenate((multiplier, halo), axis=i)
+        return multiplier
 
     def dbyd(self, axis, weights=None):
         if axis > 1:
@@ -433,7 +443,7 @@ class MOM6Variable(Domain):
                 self._current_hloc, axis, weights=weights)
             self.get_slice_2D()
             divisor = divisor[self._slice_2D]
-            divisor = self.implement_BC_if_necessary_for_divisor(divisor)
+            divisor = self.implement_BC_if_necessary_for_multiplier(divisor)
         elif axis == 1:
             divisor = 9.8 / 1031 * np.diff(
                 self.dim_arrays[self._final_dimensions[1]][2:4])

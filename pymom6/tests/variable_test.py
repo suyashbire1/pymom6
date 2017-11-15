@@ -78,6 +78,16 @@ class test_variable(unittest.TestCase):
             var_array /= divisor
             self.assertTrue(np.allclose(gvvar.array, var_array))
 
+    def test_array_multiplyby(self):
+        for var in self.vars:
+            gvvar = gv3(
+                var, self.fh,
+                **self.initializer).read().multiply_by('dxT').compute()
+            var_array = self.fh.variables[var][gvvar._slice]
+            multiplier = gvvar.geometry.dxT[gvvar._slice_2D]
+            var_array *= multiplier
+            self.assertTrue(np.allclose(gvvar.array, var_array))
+
     def test_multifile_array(self):
         for var in self.vars:
             gvvar = gv3(var, self.mfh,
