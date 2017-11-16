@@ -45,14 +45,6 @@ class GridGeometry():
 
     def get_divisor_for_diff(self, loc, axis, weights=None):
         axis = axis - 2
-        #        divisors = dict(
-        #            u=['dyBu', 'dxT'],
-        #            v=['dyT', 'dxBu'],
-        #            h=['dyCv', 'dxCu'],
-        #            q=['dyCu', 'dxCv'])
-        #        if weights == 'area':
-        #            divisors['u'] = ['Aq', 'Ah']
-        #            divisors['v'] = ['Ah', 'Aq']
         divisors = dict(
             u=['dyCu', 'dxCu'],
             v=['dyCv', 'dxCv'],
@@ -255,6 +247,7 @@ class MOM6Variable(Domain):
         vdim = loc_registry_ver[vloc]
         hdims = loc_registry_hor[hloc]
         return tuple(['Time', vdim, *hdims])
+
 
 #     def get_current_location_dimensions(self, loc):
 #         self._current_hloc = loc[0]
@@ -522,10 +515,10 @@ class MOM6Variable(Domain):
         assert e._current_vloc == 'i'
         if not isinstance(z, np.ndarray):
             z = np.array(z) if isinstance(z, list) else np.array([z])
-        self.dim_arrays['z'] = z
-        self.indices['z'] = 0, z.size, 1
+        self.dim_arrays['z (m)'] = z
+        self.indices['z (m)'] = 0, z.size, 1
         dims = list(self._current_dimensions)
-        dims[1] = 'z'
+        dims[1] = 'z (m)'
         self._current_dimensions = dims
         try:
             fillvalue = self.fillvalue
@@ -560,12 +553,6 @@ class MOM6Variable(Domain):
             if isinstance(value, np.ndarray):
                 coords_squeezed[coord] = value
                 dims_squeezed.append(coord)
-
-
-#        for i, (coord, value) in enumerate(list(coords.items())):
-#            if not isinstance(value, np.ndarray):
-#                coords.pop(coord)
-#                dims.pop(i)
         da = xr.DataArray(
             self.array.squeeze(), coords=coords_squeezed, dims=dims_squeezed)
         da.name = self._name
@@ -574,6 +561,25 @@ class MOM6Variable(Domain):
         if self._units:
             da.attrs['units'] = self._units
         return da
+
+    def tokm(self, axis, dim_str=None):
+        R = 6378
+        dim_str_dict = {2: 'y (km)', 3: 'x (km)'}
+        if axis == 3:
+            ymean = np.mean(list(self.dimensions.items())[2][1])
+            dim_array = list(self.dimensions.items())[3][1]
+            dim_array = R * np.cos(np.radians(ymean)) * np.radians(dim_array)
+        if axis == 2:
+            dim_array = list(self.dimensions.items())[2][1]
+            dim_array = R * np.radians(dim_array)
+        if dim_str is None:
+            dim_str = dim_str_dict[axis]
+        self.dim_arrays[dim_str] = dim_array
+        self.indices[dim_str] = 0, dim_array.size, 1
+        dims = list(self._current_dimensions)
+        dims[axis] = dim_str
+        self._current_dimensions = dims
+        return self
 
     @property
     def dimensions(self):
