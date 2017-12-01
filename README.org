@@ -1,5 +1,7 @@
 A python package built on top of numpy and xarray to deal with MOM6 output.
 
-[[https://travis-ci.org/suyashbire1/pymom6][https://travis-ci.org/suyashbire1/pymom6.svg?branch=master]]
-[[https://codecov.io/gh/suyashbire1/pymom6][https://codecov.io/gh/suyashbire1/pymom6/branch/master/graph/badge.svg]]
-[[http://pymom6.readthedocs.io/en/latest/?badge=latest][https://readthedocs.org/projects/pymom6/badge/?version=latest]]
+#+begin_html
+<a href='https://travis-ci.org/suyashbire1/pymom6'><img src='https://travis-ci.org/suyashbire1/pymom6.svg?branch=master' alt='Build status' /></a>
+<a href='https://codecov.io/gh/suyashbire1/pymom6'><img src='https://codecov.io/gh/suyashbire1/pymom6/branch/master/graph/badge.svg' alt='Coverage' /></a>
+<a href='http://pymom6.readthedocs.io/en/latest/?badge=latest'><img src='https://readthedocs.org/projects/pymom6/badge/?version=latest' alt='Documentation Status' /></a>
+#+end_html
