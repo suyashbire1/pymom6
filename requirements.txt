@@ -1,0 +1,4 @@
+numba
+netCDF4
+xarray
+numpy
