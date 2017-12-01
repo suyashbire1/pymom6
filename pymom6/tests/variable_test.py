@@ -311,3 +311,12 @@ class test_variable(unittest.TestCase):
         self.assertTrue(gvvar.shape[1] == 1)
         self.assertTrue(gvvar._current_dimensions[1] == 'z')
         self.assertTrue(np.all(gvvar.array[:, -1] == 123))
+
+    def test_var_get_atz_withnan(self):
+        e = gv3('e', self.fh, **self.initializer).get_slice().read().compute()
+        gvvar = gv3(
+            'wparam', self.fh, fillvalue=np.nan,
+            **self.initializer).get_slice().read().toz(0, e).compute()
+        self.assertTrue(gvvar.shape[1] == 1)
+        self.assertTrue(gvvar._current_dimensions[1] == 'z')
+        self.assertTrue(np.any(np.isnan(gvvar.array)), msg=f'{gvvar.array}')

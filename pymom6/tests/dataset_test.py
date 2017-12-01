@@ -31,3 +31,10 @@ def test_variable_same_from_dataset(var):
         momvar1 = getattr(pdset, var).read() * 3
         momvar1 = momvar1.compute()
     assert not np.all(momvar.array == momvar1.array)
+
+
+def test_context():
+    with pymom6.Dataset(fil1) as pdset:
+        pass
+    with pytest.raises(AttributeError):
+        pdset.v

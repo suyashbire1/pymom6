@@ -7,14 +7,6 @@ from numba import jit
 import copy
 
 
-def variable_factory(fh, initializer, var):
-    try:
-        variable = MOM6Variable(var, fh, **initializer)
-    except TypeError:
-        variable = fh.variables[var][:]
-    return variable
-
-
 class Dataset():
     def __init__(self, filename, **initializer):
         self.filename = filename
@@ -30,11 +22,18 @@ class Dataset():
         self.fh.close()
         self.fh = None
 
-    def __getattr__(self, name):
+    def __getattr__(self, var):
         if self.fh is not None:
-            return variable_factory(self.fh, self.initializer, name)
+            return self._variable_factory(var)
         else:
             raise AttributeError(f'{self.filename!r} is not open.')
+
+    def _variable_factory(self, var):
+        try:
+            variable = MOM6Variable(var, self.fh, **self.initializer)
+        except TypeError:
+            variable = self.fh.variables[var][:]
+        return variable
 
 
 class GridGeometry():
@@ -518,11 +517,10 @@ class MOM6Variable(Domain):
         dims[1] = 'z'
         self._current_dimensions = dims
         try:
-            fillvalue = self.fillvalue
 
             def lazy_toz(array):
                 return self.get_var_at_z(
-                    array, z, e.array, fillvalue=fillvalue)
+                    array, z, e.array, fillvalue=self._fillvalue)
         except AttributeError:
 
             def lazy_toz(array):
