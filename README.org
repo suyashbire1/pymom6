@@ -2,3 +2,4 @@ A python package built on top of numpy and xarray to deal with MOM6 output.
 
 [[https://travis-ci.org/suyashbire1/pymom6][https://travis-ci.org/suyashbire1/pymom6.svg?branch=master]]
 [[https://codecov.io/gh/suyashbire1/pymom6][https://codecov.io/gh/suyashbire1/pymom6/branch/master/graph/badge.svg]]
+[[http://pymom6.readthedocs.io/en/latest/?badge=latest][https://readthedocs.org/projects/pymom6/badge/?version=latest]]
