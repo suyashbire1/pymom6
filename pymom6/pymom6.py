@@ -75,7 +75,7 @@ def get_extremes(obj, dim_str, low, high, **initializer):
     axis_str = dim_str[0].lower()
     stride = initializer.get('stride' + axis_str, 1)
     by_index = initializer.get('by_index', False)
-    try:
+    if dim_str in fh.variables:
         dimension = fh.variables[dim_str][:]
         if by_index:
             obj.indices[dim_str] = initializer.get('s' + axis_str,
@@ -88,8 +88,6 @@ def get_extremes(obj, dim_str, low, high, **initializer):
             obj.indices[dim_str] = *find_index_limits(dimension, low,
                                                       high), stride
         obj.dim_arrays[dim_str] = dimension
-    except KeyError:
-        pass
 
 
 class MeridionalDomain():
