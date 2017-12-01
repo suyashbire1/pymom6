@@ -495,7 +495,7 @@ class MOM6Variable(Domain):
 
     @staticmethod
     @jit
-    def get_var_at_z(array, z, e, fillvalue=0.0):
+    def get_var_at_z(array, z, e, fillvalue):
         array_out = np.full(
             (array.shape[0], z.size, array.shape[2], array.shape[3]),
             fillvalue)
@@ -519,15 +519,9 @@ class MOM6Variable(Domain):
         dims = list(self._current_dimensions)
         dims[1] = 'z (m)'
         self._current_dimensions = dims
-        try:
 
-            def lazy_toz(array):
-                return self.get_var_at_z(
-                    array, z, e.array, fillvalue=self._fillvalue)
-        except AttributeError:
-
-            def lazy_toz(array):
-                return self.get_var_at_z(array, z, e.array)
+        def lazy_toz(array):
+            return self.get_var_at_z(array, z, e.array, self._fillvalue)
 
         self.operations.append(lazy_toz)
         return self
