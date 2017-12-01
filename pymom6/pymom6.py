@@ -45,13 +45,13 @@ class GridGeometry():
     def get_divisor_for_diff(self, loc, axis, weights=None):
         axis = axis - 2
         divisors = dict(
-            u=['dyBu', 'dxT'],
-            v=['dyT', 'dxBu'],
-            h=['dyCv', 'dxCu'],
-            q=['dyCu', 'dxCv'])
+            u=['dyCu', 'dxCu'],
+            v=['dyCv', 'dxCv'],
+            h=['dyT', 'dxT'],
+            q=['dyBu', 'dxBu'])
         if weights == 'area':
-            divisors['u'] = ['Aq', 'Ah']
-            divisors['v'] = ['Ah', 'Aq']
+            divisors['h'] = ['Ah', 'Ah']
+            divisors['q'] = ['Aq', 'Aq']
         return getattr(self, divisors[loc][axis])
 
 
@@ -247,6 +247,7 @@ class MOM6Variable(Domain):
         hdims = loc_registry_hor[hloc]
         return tuple(['Time', vdim, *hdims])
 
+
 #     def get_current_location_dimensions(self, loc):
 #         self._current_hloc = loc[0]
 #         self._current_vloc = loc[1]
@@ -318,12 +319,14 @@ class MOM6Variable(Domain):
         self.implement_BC_if_necessary()
         return self
 
-    def divide_by(self, divisor):
+    def multiply_by(self, multiplier, power=1):
         self.get_slice_2D()
-        divisor = getattr(self.geometry, divisor)[self._slice_2D]
-        divisor = self.implement_BC_if_necessary_for_divisor(divisor)
-        self.operations.append(lambda a: a / divisor)
+        multiplier = getattr(self.geometry, multiplier)[self._slice_2D]**power
+        multiplier = self.implement_BC_if_necessary_for_multiplier(multiplier)
+        self.operations.append(lambda a: a * multiplier)
         return self
+
+    divide_by = partialmethod(multiply_by, power=-1)
 
     BoundaryCondition = BoundaryCondition
     _default_bc_type = dict(
@@ -410,17 +413,17 @@ class MOM6Variable(Domain):
             self.operations.append(move)
         return self
 
-    def implement_BC_if_necessary_for_divisor(self, divisor):
+    def implement_BC_if_necessary_for_multiplier(self, multiplier):
         dims = self._final_dimensions
         for i, dim in enumerate(dims[2:]):
             indices = self.indices[dim]
             if indices[0] < 0:
-                halo = np.take(divisor, [0], axis=i)
-                divisor = np.concatenate((halo, divisor), axis=i)
+                halo = np.take(multiplier, [0], axis=i)
+                multiplier = np.concatenate((halo, multiplier), axis=i)
             if (indices[1] > self.dim_arrays[dim].size):
-                halo = np.take(divisor, [-1], axis=i)
-                divisor = np.concatenate((divisor, halo), axis=i)
-        return divisor
+                halo = np.take(multiplier, [-1], axis=i)
+                multiplier = np.concatenate((multiplier, halo), axis=i)
+        return multiplier
 
     def dbyd(self, axis, weights=None):
         if axis > 1:
@@ -432,7 +435,7 @@ class MOM6Variable(Domain):
                 self._current_hloc, axis, weights=weights)
             self.get_slice_2D()
             divisor = divisor[self._slice_2D]
-            divisor = self.implement_BC_if_necessary_for_divisor(divisor)
+            divisor = self.implement_BC_if_necessary_for_multiplier(divisor)
         elif axis == 1:
             divisor = 9.8 / 1031 * np.diff(
                 self.dim_arrays[self._final_dimensions[1]][2:4])
@@ -511,10 +514,10 @@ class MOM6Variable(Domain):
         assert e._current_vloc == 'i'
         if not isinstance(z, np.ndarray):
             z = np.array(z) if isinstance(z, list) else np.array([z])
-        self.dim_arrays['z'] = z
-        self.indices['z'] = 0, z.size, 1
+        self.dim_arrays['z (m)'] = z
+        self.indices['z (m)'] = 0, z.size, 1
         dims = list(self._current_dimensions)
-        dims[1] = 'z'
+        dims[1] = 'z (m)'
         self._current_dimensions = dims
         try:
 
@@ -548,12 +551,6 @@ class MOM6Variable(Domain):
             if isinstance(value, np.ndarray):
                 coords_squeezed[coord] = value
                 dims_squeezed.append(coord)
-
-
-#        for i, (coord, value) in enumerate(list(coords.items())):
-#            if not isinstance(value, np.ndarray):
-#                coords.pop(coord)
-#                dims.pop(i)
         da = xr.DataArray(
             self.array.squeeze(), coords=coords_squeezed, dims=dims_squeezed)
         da.name = self._name
@@ -562,6 +559,25 @@ class MOM6Variable(Domain):
         if self._units:
             da.attrs['units'] = self._units
         return da
+
+    def tokm(self, axis, dim_str=None):
+        R = 6378
+        dim_str_dict = {2: 'y (km)', 3: 'x (km)'}
+        if axis == 3:
+            ymean = np.mean(list(self.dimensions.items())[2][1])
+            dim_array = list(self.dimensions.items())[3][1]
+            dim_array = R * np.cos(np.radians(ymean)) * np.radians(dim_array)
+        if axis == 2:
+            dim_array = list(self.dimensions.items())[2][1]
+            dim_array = R * np.radians(dim_array)
+        if dim_str is None:
+            dim_str = dim_str_dict[axis]
+        self.dim_arrays[dim_str] = dim_array
+        self.indices[dim_str] = 0, dim_array.size, 1
+        dims = list(self._current_dimensions)
+        dims[axis] = dim_str
+        self._current_dimensions = dims
+        return self
 
     @property
     def dimensions(self):

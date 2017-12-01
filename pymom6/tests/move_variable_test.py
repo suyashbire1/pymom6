@@ -523,12 +523,43 @@ class test_move(unittest.TestCase):
                 u = u.filled(0)
             if i == 0:
                 u = np.concatenate((u, -u[:, :, -1:, :]), axis=2)
+                divisor1 = self.fhgeo.variables['dyCu'][:]
                 divisor = self.fhgeo.variables['dyBu'][:]
+                self.assertTrue(np.allclose(divisor, divisor1))
             elif i == 1:
                 u = np.concatenate((np.zeros(u[:, :, :, :1].shape), u), axis=3)
                 divisor = self.fhgeo.variables['dxT'][:]
             du = np.diff(u, axis=axis[i]) / divisor
             self.assertTrue(np.allclose(du, gvvar))
+
+    def test_ddx_u_weights_area(self):
+        ops = ['yep', 'xsm']
+        axis = [2, 3]
+        new_loc = ['q', 'h']
+        for i, op in enumerate(ops):
+            gvvar = getattr(
+                gv3('u',
+                    self.fh,
+                    final_loc=new_loc[i] + 'l',
+                    geometry=self.geometry), op)().get_slice().read()
+            self.assertTrue(gvvar.hloc == 'u')
+            gvvar = gvvar.dbyd(axis[i], weights='area')
+            self.assertTrue(gvvar.hloc == new_loc[i])
+            dims = gvvar.dimensions
+            gvvar = gvvar.compute().array
+            for j, (key, value) in enumerate(dims.items()):
+                self.assertTrue(value.size == gvvar.shape[j])
+            u = self.fh.variables['u'][:]
+            if np.ma.isMaskedArray(u):
+                u = u.filled(0)
+            if i == 0:
+                u = np.concatenate((u, -u[:, :, -1:, :]), axis=2)
+                divisor = self.fhgeo.variables['Aq'][:]
+            elif i == 1:
+                u = np.concatenate((np.zeros(u[:, :, :, :1].shape), u), axis=3)
+                divisor = self.fhgeo.variables['Ah'][:]
+            du = np.diff(u, axis=axis[i]) / divisor
+            self.assertTrue(np.allclose(du, gvvar), msg=f'{i}')
 
     def test_ddx_v(self):
         ops = ['ysm', 'xep']

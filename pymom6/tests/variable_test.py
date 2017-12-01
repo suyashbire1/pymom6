@@ -78,6 +78,16 @@ class test_variable(unittest.TestCase):
             var_array /= divisor
             self.assertTrue(np.allclose(gvvar.array, var_array))
 
+    def test_array_multiplyby(self):
+        for var in self.vars:
+            gvvar = gv3(
+                var, self.fh,
+                **self.initializer).read().multiply_by('dxT').compute()
+            var_array = self.fh.variables[var][gvvar._slice]
+            multiplier = gvvar.geometry.dxT[gvvar._slice_2D]
+            var_array *= multiplier
+            self.assertTrue(np.allclose(gvvar.array, var_array))
+
     def test_multifile_array(self):
         for var in self.vars:
             gvvar = gv3(var, self.mfh,
@@ -309,7 +319,7 @@ class test_variable(unittest.TestCase):
         self.assertTrue(np.all(gvvar.array[:, -1] == 123))
         gvvar = gvvar.toz(-2400, e).compute()
         self.assertTrue(gvvar.shape[1] == 1)
-        self.assertTrue(gvvar._current_dimensions[1] == 'z')
+        self.assertTrue(gvvar._current_dimensions[1] == 'z (m)')
         self.assertTrue(np.all(gvvar.array[:, -1] == 123))
 
     def test_var_get_atz_withnan(self):
@@ -318,5 +328,31 @@ class test_variable(unittest.TestCase):
             'wparam', self.fh, fillvalue=np.nan,
             **self.initializer).get_slice().read().toz(0, e).compute()
         self.assertTrue(gvvar.shape[1] == 1)
-        self.assertTrue(gvvar._current_dimensions[1] == 'z')
+        self.assertTrue(gvvar._current_dimensions[1] == 'z (m)')
         self.assertTrue(np.any(np.isnan(gvvar.array)), msg=f'{gvvar.array}')
+
+    def test_tokm(self):
+        dim_str = ['x (km)', 'y (km)']
+        axis = [3, 2]
+        for i, dstr in enumerate(dim_str):
+            gvvar = gv3('wparam', self.fh, **self.initializer).read().tokm(
+                axis[i]).compute()
+            slc = gvvar.get_slice_2D()._slice_2D
+            self.assertTrue(list(gvvar.dimensions.keys())[axis[i]] == dstr)
+            xh = self.fh.variables['xh'][:]
+            xh = xh[slc[1]]
+            yh = self.fh.variables['yh'][:]
+            yh = yh[slc[0]]
+            if i == 0:
+                x = 6378 * np.cos(np.radians(yh.mean())) * np.radians(xh)
+                self.assertTrue(
+                    np.allclose(list(gvvar.dimensions.values())[axis[i]], x),
+                    msg=f'{x}')
+            if i == 1:
+                y = 6378 * np.radians(yh)
+                self.assertTrue(
+                    np.allclose(list(gvvar.dimensions.values())[axis[i]], y))
+            gvvar = gv3('wparam', self.fh, **self.initializer).read().tokm(
+                axis[i], dim_str='test').compute()
+            slc = gvvar.get_slice_2D()._slice_2D
+            self.assertTrue(list(gvvar.dimensions.keys())[axis[i]] == 'test')
