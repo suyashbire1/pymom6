@@ -185,6 +185,21 @@ class BoundaryCondition():
         return self.append_halo_to_array(array)
 
 
+def get_var_at_z(array, z, e, fillvalue):
+    array_out = np.full(
+        (array.shape[0], z.shape[0], array.shape[2], array.shape[3]),
+        fillvalue)
+    for l in range(array.shape[0]):
+        for k in range(array.shape[1]):
+            for j in range(array.shape[2]):
+                for i in range(array.shape[3]):
+                    for m in range(z.shape[0]):
+                        if (e[l, k, j, i] - z[m]) * (
+                                e[l, k + 1, j, i] - z[m]) <= 0:
+                            array_out[l, m, j, i] = array[l, k, j, i]
+    return array_out
+
+
 class MOM6Variable(Domain):
     def __init__(self, var, fh, **initializer):
         """A MOM6 variable that is located at one of the h,u,v,q,l,i points.
@@ -507,21 +522,7 @@ class MOM6Variable(Domain):
         self.operations.append(meanfunc)
         return self
 
-    @staticmethod
-    @jit
-    def get_var_at_z(array, z, e, fillvalue):
-        array_out = np.full(
-            (array.shape[0], z.size, array.shape[2], array.shape[3]),
-            fillvalue)
-        for l in range(array.shape[0]):
-            for k in range(array.shape[1]):
-                for j in range(array.shape[2]):
-                    for i in range(array.shape[3]):
-                        for m in range(z.size):
-                            if (e[l, k, j, i] - z[m]) * (
-                                    e[l, k + 1, j, i] - z[m]) <= 0:
-                                array_out[l, m, j, i] = array[l, k, j, i]
-        return array_out
+    get_var_at_z = staticmethod(jit()(get_var_at_z))
 
     def toz(self, z, e):
         assert self._current_hloc == e._current_hloc
