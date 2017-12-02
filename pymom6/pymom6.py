@@ -204,7 +204,7 @@ class MOM6Variable(Domain):
     def __init__(self, var, fh, **initializer):
         """A MOM6 variable that is located at one of the h,u,v,q,l,i points.
 
-        :param var: (string) name of the variable
+        :param var: name of the variable
         :param fh: a handle to an open netCDF file
         :returns: a variable object holding all the data
         :rtype: MOM6Variable
@@ -221,6 +221,8 @@ class MOM6Variable(Domain):
         Domain.__init__(self, **initializer)
         self.array = None
         self.polish(**initializer)
+        if 'average_DT' in fh.variables:
+            self._average_DT = fh.variables['average_DT'][:]
 
     def polish(self, **initializer):
         final_loc = initializer.get('final_loc', None)
@@ -275,12 +277,6 @@ class MOM6Variable(Domain):
         vdim = loc_registry_ver[vloc]
         hdims = loc_registry_hor[hloc]
         return tuple(['Time', vdim, *hdims])
-
-
-#     def get_current_location_dimensions(self, loc):
-#         self._current_hloc = loc[0]
-#         self._current_vloc = loc[1]
-#         self._current_dimensions = list(self.get_dimensions_by_location(loc))
 
     def get_final_location_dimensions(self):
         self._final_hloc = self._final_loc[0]
@@ -503,23 +499,40 @@ class MOM6Variable(Domain):
             self.LazyNumpyOperation(npfunc, *args, **kwargs))
         return self
 
-    def nanmean(self, axis=[0, 1, 2, 3], keepdims=True):
+    @staticmethod
+    def meanfunc(array, axis=[1, 2, 3]):
+        return np.nanmean(array, axis=axis, keepdims=True)
+
+    @staticmethod
+    def meanfunc_time(array, dt=0, axis=0):
+        dt = dt[:, np.newaxis, np.newaxis, np.newaxis]
+        array *= dt
+        return np.nansum(array, axis=axis, keepdims=True) / np.sum(dt)
+
+    def nanmean(self, axis=[0, 1, 2, 3]):
         try:
             for ax in axis:
                 axis_string = self._current_dimensions[ax]
                 self.dim_arrays[axis_string] = np.mean(
                     self.dim_arrays[axis_string])
                 self.indices.pop(axis_string)
+                if ax == 0:
+                    self.operations.append(
+                        partial(
+                            self.meanfunc_time, dt=self._average_DT, axis=ax))
+                else:
+                    self.operations.append(partial(self.meanfunc, axis=ax))
         except TypeError:
             axis_string = self._current_dimensions[axis]
             self.dim_arrays[axis_string] = np.mean(
                 self.dim_arrays[axis_string])
             self.indices.pop(axis_string)
-
-        def meanfunc(array):
-            return np.nanmean(array, axis=axis, keepdims=keepdims)
-
-        self.operations.append(meanfunc)
+            if axis == 0:
+                self.operations.append(
+                    partial(
+                        self.meanfunc_time, dt=self._average_DT, axis=axis))
+            else:
+                self.operations.append(partial(self.meanfunc, axis=axis))
         return self
 
     get_var_at_z = staticmethod(jit()(get_var_at_z))

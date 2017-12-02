@@ -247,15 +247,16 @@ class test_variable(unittest.TestCase):
 
     def test_nanmean_xy(self):
         for var in self.vars:
-            gvvar = (gv3(var, self.fh).get_slice().read().nanmean(
-                axis=(2, 3), keepdims=False).compute())
+            gvvar = (gv3(
+                var,
+                self.fh).get_slice().read().nanmean(axis=(2, 3)).compute())
             dims = gvvar.dimensions
             self.assertTrue(list(dims.items())[2][1].size == 1)
             self.assertTrue(list(dims.items())[3][1].size == 1)
             var_array = self.fh.variables[var][:]
             if np.ma.isMaskedArray(var_array):
                 var_array = var_array.filled(0)
-            var_array = np.nanmean(var_array, axis=(2, 3), keepdims=False)
+            var_array = np.nanmean(var_array, axis=(2, 3), keepdims=True)
             self.assertTrue(np.allclose(gvvar.array, var_array), )
             gvvar = (gv3(var, self.fh).get_slice().read()
                      .nanmean(axis=2).compute())
