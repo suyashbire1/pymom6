@@ -8,6 +8,7 @@ import numpy as np
 import xarray as xr
 import unittest
 import os.path
+import matplotlib as mpl
 gv3 = pymom6.MOM6Variable
 geom = pymom6.GridGeometry
 pdset = pymom6.Dataset
@@ -287,12 +288,16 @@ class test_variable(unittest.TestCase):
                     axis=0).to_DataArray()
             shp = gvvar.shape
             self.assertIsInstance(gvvar, xr.DataArray)
-            self.assertTrue(len(shp) == 3)
+            self.assertTrue(len(shp) == 4)
+            self.assertTrue(shp[0] == 1)
             gvvar = gv3(var, self.fh,
                         **self.initializer).get_slice().read().nanmean(
                             axis=(0, 2)).to_DataArray()
+            shp = gvvar.shape
             self.assertIsInstance(gvvar, xr.DataArray)
-            self.assertTrue(len(gvvar.shape) == 2)
+            self.assertTrue(len(shp) == 4)
+            self.assertTrue(shp[0] == 1)
+            self.assertTrue(shp[2] == 1)
 
     def test_get_var_at_z(self):
         array = np.full((1, 3, 5, 5), 1)
@@ -308,7 +313,6 @@ class test_variable(unittest.TestCase):
         self.assertTrue(np.all(array_at_z[:, 1] == 1))
         self.assertTrue(np.all(array_at_z[:, 2] == 2))
         self.assertTrue(np.all(array_at_z[:, 3] == 2))
-        pass
 
     def test_var_get_atz(self):
         gvvar = gv3('wparam', self.fh,
@@ -322,6 +326,39 @@ class test_variable(unittest.TestCase):
         self.assertTrue(gvvar.shape[1] == 1)
         self.assertTrue(gvvar._current_dimensions[1] == 'z (m)')
         self.assertTrue(np.all(gvvar.array[:, -1] == 123))
+
+    def test_var_get_atz_xarray(self):
+        gvvar = gv3('wparam', self.fh,
+                    **self.initializer).get_slice().read().compute()
+        e = gv3('e', self.fh, **self.initializer).get_slice().read().compute()
+        array = gvvar.values
+        array[:, -1] = 123
+        gvvar.values = array
+        self.assertTrue(np.all(gvvar.array[:, -1] == 123))
+        gvvar = gvvar.toz(-2400, e).to_DataArray()
+        self.assertTrue(gvvar.shape[1] == 1)
+        self.assertTrue(gvvar.dims[1] == 'z (m)')
+        self.assertTrue(np.all(gvvar.values[:, -1] == 123))
+
+    def test_var_get_atz_plot(self):
+        e = gv3(
+            'e', self.fh, final_loc='ui',
+            **self.initializer).zep().xep().read().move_to('u').nanmean(
+                axis=(0, 2)).compute()
+        gvvar = gv3('u', self.fh,
+                    **self.initializer).read().nanmean(axis=(0, 2)).toz(
+                        np.linspace(-2400, -1, 5), e).to_DataArray()
+        im = gvvar.plot()
+        self.assertIsInstance(im, mpl.collections.QuadMesh)
+        e = gv3(
+            'e', self.fh, final_loc='ui',
+            **self.initializer).zep().xep().read().move_to('u').nanmean(
+                axis=2).compute()
+        gvvar = gv3('u',
+                    self.fh, **self.initializer).read().nanmean(axis=2).toz(
+                        -1, e).to_DataArray()
+        im = gvvar.plot()
+        self.assertIsInstance(im, mpl.collections.QuadMesh)
 
     def test_var_get_atz_withnan(self):
         e = gv3('e', self.fh, **self.initializer).get_slice().read().compute()

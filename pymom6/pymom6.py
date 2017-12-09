@@ -572,9 +572,11 @@ class MOM6Variable(Domain):
         for i, (coord, value) in enumerate(coords.items()):
             if isinstance(value, np.ndarray):
                 coords_squeezed[coord] = value
-                dims_squeezed.append(coord)
+            else:
+                coords_squeezed[coord] = np.array([value])
+            dims_squeezed.append(coord)
         da = xr.DataArray(
-            self.array.squeeze(), coords=coords_squeezed, dims=dims_squeezed)
+            self.array, coords=coords_squeezed, dims=dims_squeezed)
         da.name = self._name
         if self._math:
             da.attrs['math'] = self._math
