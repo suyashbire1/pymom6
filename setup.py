@@ -14,5 +14,6 @@ setup(
         'netCDF4',
         'numpy',
         'xarray',
+        'matplotlib',
     ],
     zip_safe=False)
