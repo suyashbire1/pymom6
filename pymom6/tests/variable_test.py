@@ -9,6 +9,8 @@ import xarray as xr
 import unittest
 import os.path
 import matplotlib as mpl
+mpl.use('agg')
+import matplotlib.pyplot as plt
 gv3 = pymom6.MOM6Variable
 geom = pymom6.GridGeometry
 pdset = pymom6.Dataset
@@ -348,7 +350,8 @@ class test_variable(unittest.TestCase):
         gvvar = gv3('u', self.fh,
                     **self.initializer).read().nanmean(axis=(0, 2)).toz(
                         np.linspace(-2400, -1, 5), e).to_DataArray()
-        im = gvvar.plot()
+        fig, ax = plt.subplots(1, 1)
+        im = gvvar.plot(ax=ax)
         self.assertIsInstance(im, mpl.collections.QuadMesh)
         e = gv3(
             'e', self.fh, final_loc='ui',
@@ -357,7 +360,7 @@ class test_variable(unittest.TestCase):
         gvvar = gv3('u',
                     self.fh, **self.initializer).read().nanmean(axis=2).toz(
                         -1, e).to_DataArray()
-        im = gvvar.plot()
+        im = gvvar.plot(ax=ax)
         self.assertIsInstance(im, mpl.collections.QuadMesh)
 
     def test_var_get_atz_withnan(self):
