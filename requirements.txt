@@ -1,4 +1,1 @@
-numba
-netCDF4
-xarray
-numpy
+numpy netCDF4 xarray numba pytest-cov codecov matplotlib
