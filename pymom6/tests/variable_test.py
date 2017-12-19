@@ -75,7 +75,7 @@ class test_variable(unittest.TestCase):
             gvvar = gv3(var, self.fh,
                         **self.initializer).read().divide_by('dxT').compute()
             var_array = self.fh.variables[var][gvvar._slice]
-            divisor = gvvar.geometry.dxT[gvvar._slice_2D]
+            divisor = gvvar._geometry.dxT[gvvar._slice_2D]
             var_array /= divisor
             self.assertTrue(np.allclose(gvvar.array, var_array))
 
@@ -85,7 +85,7 @@ class test_variable(unittest.TestCase):
                 var, self.fh,
                 **self.initializer).read().multiply_by('dxT').compute()
             var_array = self.fh.variables[var][gvvar._slice]
-            multiplier = gvvar.geometry.dxT[gvvar._slice_2D]
+            multiplier = gvvar._geometry.dxT[gvvar._slice_2D]
             var_array *= multiplier
             self.assertTrue(np.allclose(gvvar.array, var_array))
 
@@ -178,6 +178,25 @@ class test_variable(unittest.TestCase):
         self.assertTrue(np.allclose(gvvar.array, var_array))
         self.assertTrue(np.allclose(gvvar.dimensions['xh'], xh[:-1]))
 
+    def test_where(self):
+        for var in self.vars:
+            gvvar = gv3(
+                var, self.fh, fillvalue=0).read().where(
+                    np.less_equal, 0, y=0).compute()
+            array = self.fh.variables[var][:]
+            if np.ma.isMaskedArray(array):
+                array.filled(0)
+            array[array > 0] = 0
+            self.assertTrue(np.allclose(gvvar.array, array), msg=f'{var}')
+            gvvar = gv3(
+                var, self.fh, fillvalue=0).read().where(np.less_equal,
+                                                        0).compute()
+            array = self.fh.variables[var][:]
+            if np.ma.isMaskedArray(array):
+                array.filled(0)
+            i = np.where(array <= 0)
+            self.assertTrue(np.allclose(gvvar.array, i), msg=f'{var}')
+
     def test_boundary_conditions(self):
         for var in self.vars:
             gvvar = gv3(var, self.fh).xsm().xep().ysm().yep().get_slice().read(
@@ -226,7 +245,6 @@ class test_variable(unittest.TestCase):
             gvvar = (gv3(var, self.fh).get_slice().read()
                      .nanmean(axis=(0, 1)).compute())
             dims = gvvar.dimensions
-            #self.assertTrue(list(dims.items())[0][1].size == 1)
             self.assertTrue(dims['Time'].size == 1)
             self.assertTrue(list(dims.items())[1][1].size == 1)
             var_array = self.fh.variables[var][:]
@@ -242,6 +260,31 @@ class test_variable(unittest.TestCase):
             if np.ma.isMaskedArray(var_array):
                 var_array = var_array.filled(0)
             var_array = np.nanmean(var_array, axis=1, keepdims=True)
+            self.assertTrue(
+                np.allclose(gvvar.array, var_array),
+                msg=f'{var, gvvar.array-var_array}')
+
+    def test_nansum_reduce_tz(self):
+        for var in self.vars:
+            gvvar = (gv3(var, self.fh).read().reduce_(np.nansum,
+                                                      axis=(0, 1)).compute())
+            dims = gvvar.dimensions
+            #self.assertTrue(list(dims.items())[0][1].size == 1)
+            self.assertTrue(dims['Time'].size == 1)
+            self.assertTrue(list(dims.items())[1][1].size == 1)
+            var_array = self.fh.variables[var][:]
+            if np.ma.isMaskedArray(var_array):
+                var_array.filled(0)
+            var_array = np.nansum(var_array, axis=(0, 1), keepdims=True)
+            self.assertTrue(np.allclose(gvvar.array, var_array))
+            gvvar = (gv3(var, self.fh).read().reduce_(np.nansum,
+                                                      axis=1).compute())
+            dims = gvvar.dimensions
+            self.assertTrue(list(dims.items())[1][1].size == 1)
+            var_array = self.fh.variables[var][:]
+            if np.ma.isMaskedArray(var_array):
+                var_array = var_array.filled(0)
+            var_array = np.nansum(var_array, axis=1, keepdims=True)
             self.assertTrue(
                 np.allclose(gvvar.array, var_array),
                 msg=f'{var, gvvar.array-var_array}')
@@ -267,6 +310,41 @@ class test_variable(unittest.TestCase):
             if np.ma.isMaskedArray(var_array):
                 var_array = var_array.filled(0)
             var_array = np.nanmean(var_array, axis=2, keepdims=True)
+            self.assertTrue(
+                np.allclose(gvvar.array, var_array),
+                msg=f'{var, gvvar.array-var_array}')
+
+    def test_nansum_reduce_xy(self):
+        for var in self.vars:
+            gvvar = (gv3(var, self.fh).read().reduce_(np.nansum,
+                                                      axis=(2, 3)).compute())
+            dims = gvvar.dimensions
+            self.assertTrue(list(dims.items())[2][1].size == 1)
+            self.assertTrue(list(dims.items())[3][1].size == 1)
+            var_array = self.fh.variables[var][:]
+            if np.ma.isMaskedArray(var_array):
+                var_array = var_array.filled(0)
+            var_array = np.nansum(var_array, axis=(2, 3), keepdims=True)
+            self.assertTrue(np.allclose(gvvar.array, var_array), )
+            gvvar = (gv3(var, self.fh).read().reduce_(np.nansum,
+                                                      axis=2).compute())
+            dims = gvvar.dimensions
+            self.assertTrue(list(dims.items())[2][1].size == 1)
+            var_array = self.fh.variables[var][:]
+            if np.ma.isMaskedArray(var_array):
+                var_array = var_array.filled(0)
+            var_array = np.nansum(var_array, axis=2, keepdims=True)
+            self.assertTrue(
+                np.allclose(gvvar.array, var_array),
+                msg=f'{var, gvvar.array-var_array}')
+            gvvar = (gv3(var, self.fh).read().reduce_(
+                np.nansum, keepdims=False, axis=2).compute())
+            dims = gvvar.dimensions
+            self.assertTrue(list(dims.items())[2][1].size == 1)
+            var_array = self.fh.variables[var][:]
+            if np.ma.isMaskedArray(var_array):
+                var_array = var_array.filled(0)
+            var_array = np.nansum(var_array, axis=2, keepdims=False)
             self.assertTrue(
                 np.allclose(gvvar.array, var_array),
                 msg=f'{var, gvvar.array-var_array}')
@@ -319,13 +397,13 @@ class test_variable(unittest.TestCase):
                     **self.initializer).get_slice().read().compute()
         e = gv3('e', self.fh, **self.initializer).get_slice().read().compute()
         array = gvvar.values
-        array[:, -1] = 123
+        array[:, -1] = 1e-2
         gvvar.values = array
-        self.assertTrue(np.all(gvvar.array[:, -1] == 123))
+        self.assertTrue(np.all(gvvar.array[:, -1] == 1e-2))
         gvvar = gvvar.toz(-2400, e).compute()
         self.assertTrue(gvvar.shape[1] == 1)
         self.assertTrue(gvvar._current_dimensions[1] == 'z (m)')
-        self.assertTrue(np.all(gvvar.array[:, -1] == 123))
+        self.assertTrue(np.allclose(gvvar.array[:, -1], 1e-2))
 
     def test_var_get_atz_xarray(self):
         gvvar = gv3('wparam', self.fh,

@@ -3,7 +3,7 @@ from functools import partial, partialmethod
 from collections import OrderedDict
 from netCDF4 import Dataset as dset, MFDataset as mfdset
 import xarray as xr
-from numba import jit
+from numba import jit, float32, float64
 import copy
 
 
@@ -143,7 +143,10 @@ class LazyNumpyOperation():
         self.kwargs = kwargs
 
     def __call__(self, array):
-        return self.func(array, *self.args, **self.kwargs)
+        func = self.func
+        args = self.args
+        kwargs = self.kwargs
+        return func(array, *args, **kwargs)
 
 
 class BoundaryCondition():
@@ -221,23 +224,40 @@ class MOM6Variable(Domain):
         Domain.__init__(self, **initializer)
         self.array = None
         self.polish(**initializer)
-        if 'average_DT' in fh.variables:
+        try:
             self._average_DT = fh.variables['average_DT'][:]
+        except KeyError:
+            self._average_DT = None
 
     def polish(self, **initializer):
-        final_loc = initializer.get('final_loc', None)
-        if final_loc:
-            self._final_loc = final_loc
-        else:
-            self._final_loc = self._current_hloc + self._current_vloc
-            self._final_dimensions = tuple(self._current_dimensions)
-        self.get_final_location_dimensions()
-        self._fillvalue = initializer.get('fillvalue', 0)
-        self._bc_type = initializer.get('bc_type', None)
-        self.geometry = initializer.get('geometry', None)
+        self.final_loc(initializer.get('final_loc', None))
+        self.fillvalue(initializer.get('fillvalue', 0))
+        self.bc_type(initializer.get('bc_type', None))
+        self.geometry(initializer.get('geometry', None))
         self._units = initializer.get('units', None)
         self._math = initializer.get('math', None)
         self.operations = []
+        return self
+
+    def final_loc(self, final_loc=None):
+        if final_loc:
+            self._final_loc = final_loc
+        else:
+            self.final_loc(self._current_hloc + self._current_vloc)
+            self._final_dimensions = tuple(self._current_dimensions)
+        self.get_final_location_dimensions()
+        return self
+
+    def fillvalue(self, fillvalue):
+        self._fillvalue = fillvalue
+        return self
+
+    def bc_type(self, bc_type):
+        self._bc_type = bc_type
+        return self
+
+    def geometry(self, geometry):
+        self._geometry = geometry
         return self
 
     def determine_location(self):
@@ -346,7 +366,7 @@ class MOM6Variable(Domain):
 
     def multiply_by(self, multiplier, power=1):
         self.get_slice_2D()
-        multiplier = getattr(self.geometry, multiplier)[self._slice_2D]**power
+        multiplier = getattr(self._geometry, multiplier)[self._slice_2D]**power
         multiplier = self.implement_BC_if_necessary_for_multiplier(multiplier)
         self.operations.append(lambda a: a * multiplier)
         return self
@@ -456,7 +476,7 @@ class MOM6Variable(Domain):
                 self._current_hloc, axis=axis)
             self.adjust_dimensions_and_indices_for_horizontal_move(
                 axis, ns, ne)
-            divisor = self.geometry.get_divisor_for_diff(
+            divisor = self._geometry.get_divisor_for_diff(
                 self._current_hloc, axis, weights=weights)
             self.get_slice_2D()
             divisor = divisor[self._slice_2D]
@@ -499,6 +519,17 @@ class MOM6Variable(Domain):
             self.LazyNumpyOperation(npfunc, *args, **kwargs))
         return self
 
+    def where(self, logic_function, other_array, y=None):
+        def wraps_where(array):
+            condition = logic_function(array, other_array)
+            if y is not None:
+                return np.where(condition, array, y)
+            else:
+                return np.where(condition)
+
+        self.operations.append(wraps_where)
+        return self
+
     @staticmethod
     def meanfunc(array, axis=[1, 2, 3]):
         return np.nanmean(array, axis=axis, keepdims=True)
@@ -509,47 +540,75 @@ class MOM6Variable(Domain):
         array *= dt
         return np.nansum(array, axis=axis, keepdims=True) / np.sum(dt)
 
+    def reduce_axis(self, axis, reduce_func):
+        axis_string = self._current_dimensions[axis]
+        self.dim_arrays[axis_string] = reduce_func(
+            self.dim_arrays[axis_string])
+        self.indices.pop(axis_string)
+
     def nanmean(self, axis=[0, 1, 2, 3]):
         try:
             for ax in axis:
-                axis_string = self._current_dimensions[ax]
-                self.dim_arrays[axis_string] = np.mean(
-                    self.dim_arrays[axis_string])
-                self.indices.pop(axis_string)
+                self.reduce_axis(ax, np.mean)
                 if ax == 0:
-                    self.operations.append(
-                        partial(
-                            self.meanfunc_time, dt=self._average_DT, axis=ax))
+                    if self._average_DT is not None:
+                        self.operations.append(
+                            partial(
+                                self.meanfunc_time,
+                                dt=self._average_DT,
+                                axis=ax))
+                    else:
+                        self.operations.append(partial(self.meanfunc, axis=ax))
                 else:
                     self.operations.append(partial(self.meanfunc, axis=ax))
         except TypeError:
-            axis_string = self._current_dimensions[axis]
-            self.dim_arrays[axis_string] = np.mean(
-                self.dim_arrays[axis_string])
-            self.indices.pop(axis_string)
+            self.reduce_axis(axis, np.mean)
             if axis == 0:
-                self.operations.append(
-                    partial(
-                        self.meanfunc_time, dt=self._average_DT, axis=axis))
+                if self._average_DT is not None:
+                    self.operations.append(
+                        partial(
+                            self.meanfunc_time, dt=self._average_DT,
+                            axis=axis))
+                else:
+                    self.operations.append(partial(self.meanfunc, axis=axis))
             else:
                 self.operations.append(partial(self.meanfunc, axis=axis))
         return self
 
-    get_var_at_z = staticmethod(jit()(get_var_at_z))
+    def reduce_(self, reduce_func, *args, keepdims=True, **kwargs):
+        axis = kwargs.get('axis', (0, 1, 2, 3))
+        try:
+            for ax in axis:
+                self.reduce_axis(ax, reduce_func)
+        except TypeError:
+            self.reduce_axis(axis, reduce_func)
+        if keepdims:
+            kwargs['keepdims'] = keepdims
+        self.operations.append(
+            self.LazyNumpyOperation(reduce_func, *args, **kwargs))
+        return self
 
-    def toz(self, z, e):
+    get_var_at_z = staticmethod(
+        jit(float64[:, :, :, :](float64[:, :, :, :], float64[:],
+                                float64[:, :, :, :], float32))(get_var_at_z))
+
+    def toz(self, z, e, dimstr='z (m)'):
         assert self._current_hloc == e._current_hloc
         assert e._current_vloc == 'i'
         if not isinstance(z, np.ndarray):
-            z = np.array(z) if isinstance(z, list) else np.array([z])
-        self.dim_arrays['z (m)'] = z
-        self.indices['z (m)'] = 0, z.size, 1
+            z = np.array(
+                z, dtype=np.float64) if isinstance(z, list) else np.array(
+                    [z], dtype=np.float64)
+        self.dim_arrays[dimstr] = z
+        self.indices[dimstr] = 0, z.size, 1
         dims = list(self._current_dimensions)
-        dims[1] = 'z (m)'
+        dims[1] = dimstr
         self._current_dimensions = dims
 
         def lazy_toz(array):
-            return self.get_var_at_z(array, z, e.array, self._fillvalue)
+            return self.get_var_at_z(
+                array.astype(np.float64), z,
+                e.array.astype(np.float64), float(self._fillvalue))
 
         self.operations.append(lazy_toz)
         return self
