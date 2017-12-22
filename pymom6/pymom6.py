@@ -220,6 +220,7 @@ class MOM6Variable(Domain):
         self._initial_dimensions = list(self._v.dimensions)
         self._current_dimensions = self._initial_dimensions
         self.determine_location()
+        self.fh = fh
         initializer['fh'] = fh
         Domain.__init__(self, **initializer)
         self.array = None
@@ -228,6 +229,60 @@ class MOM6Variable(Domain):
             self._average_DT = fh.variables['average_DT'][:]
         except KeyError:
             self._average_DT = None
+
+    def sel(self, **kwargs):
+        domain_mapping = {
+            'T': TemporalDomain,
+            'z': VerticalDomain,
+            'y': MeridionalDomain,
+            'x': ZonalDomain
+        }
+        low_mapping = {
+            'T': 'initial_time',
+            'z': 'low_density',
+            'y': 'south_lat',
+            'x': 'west_lon'
+        }
+        high_mapping = {
+            'T': 'final_time',
+            'z': 'high_density',
+            'y': 'north_lat',
+            'x': 'east_lon'
+        }
+        for key, value in kwargs.items():
+            if isinstance(value, slice):
+                axis = key[0]
+                domain = domain_mapping[axis]
+                kwargs = {}
+                if value.start:
+                    kwargs[low_mapping[axis]] = value.start
+                if value.stop:
+                    kwargs[high_mapping[axis]] = value.stop
+                if value.step:
+                    kwargs['stride' + axis.lower()] = value.step
+                domain.__init__(self, fh=self.fh, **kwargs)
+        return self
+
+    def isel(self, **kwargs):
+        domain_mapping = {
+            'T': TemporalDomain,
+            'z': VerticalDomain,
+            'y': MeridionalDomain,
+            'x': ZonalDomain
+        }
+        for key, value in kwargs.items():
+            if isinstance(value, slice):
+                axis = key[0]
+                domain = domain_mapping[axis]
+                kwargs = {}
+                if value.start:
+                    kwargs['s' + axis.lower()] = value.start
+                if value.stop:
+                    kwargs['e' + axis.lower()] = value.stop
+                if value.step:
+                    kwargs['stride' + axis.lower()] = value.step
+                domain.__init__(self, by_index=True, fh=self.fh, **kwargs)
+        return self
 
     def polish(self, **initializer):
         self.final_loc(initializer.get('final_loc', None))
@@ -618,8 +673,12 @@ class MOM6Variable(Domain):
             self.array = ops(self.array)
         self.operations = []
         if check_loc:
-            assert self._current_hloc == self._final_hloc
-            assert self._current_vloc == self._final_vloc
+            ch = self._current_hloc
+            fh = self._final_hloc
+            cv = self._current_vloc
+            fv = self._final_vloc
+            assert ch == fh, f'Cur hloc = {ch} is not final hloc = {fh}'
+            assert cv == fv, f'Cur vloc = {cv} is not final vloc = {fv}'
         return self
 
     def to_DataArray(self, check_loc=True):

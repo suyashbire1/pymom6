@@ -57,14 +57,30 @@ class test_variable(unittest.TestCase):
     def test_array(self):
         for var in self.vars:
             gvvar = gv3(var, self.fh,
-                        **self.initializer).get_slice().read().compute().array
+                        **self.initializer).get_slice().read().compute()
+            slices = gvvar._slice
+            array = self.fh.variables[var][slices]
+            gvvar = gvvar.array
             with pdset(self.fil1, **self.initializer) as pdset_sub:
-                pdvar = getattr(pdset_sub,
-                                var).get_slice().read().compute().array
+                pdvar = getattr(pdset_sub, var).read().compute().array
+            with pdset(self.fil1) as pdset_sub:
+                pdvar2 = getattr(pdset_sub, var).sel(
+                    xh=slice(self.west_lon, self.east_lon, 1),
+                    yh=slice(self.south_lat,
+                             self.north_lat)).read().compute().array
+                pdvar3 = getattr(pdset_sub, var).isel(
+                    Time=slices[0],
+                    zl=slices[1],
+                    xh=slices[3],
+                    yh=slice(slices[2].start,
+                             slices[2].stop)).read().compute().array
                 xh = pdset_sub.xh
             self.assertIsInstance(xh, np.ndarray)
             self.assertIsInstance(gvvar, np.ndarray)
+            self.assertTrue(np.allclose(gvvar, array))
             self.assertTrue(np.allclose(gvvar, pdvar))
+            self.assertTrue(np.allclose(gvvar, pdvar2))
+            self.assertTrue(np.allclose(gvvar, pdvar3))
 
     def test_array_check_loc(self):
         gvvar = gv3(
