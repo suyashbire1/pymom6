@@ -846,3 +846,16 @@ class MOM6Variable(Domain):
         new = copy.copy(self)
         new.operations.append(lambda a: a * -1)
         return new
+
+    def __repr__(self):
+        f_line = f"""MOM6Variable: {self._name}{self._current_dimensions}"""
+        f_line += '\nDimensions:'
+        for key, value in self.dimensions.items():
+            f_line += f'\n{key} {value.size}'
+        if self.array is not None:
+            f_line += f"""\nArray: {self.values.ravel()[:4]}..."""
+            f_line += f"""\n       {self.values.ravel()[-4:]}"""
+            f_line += f"""\nShape: {self.values.shape}"""
+            f_line += f"""\nMax, Min: {np.amax(self.values)}, """
+            f_line += f"""{np.amin(self.values)}"""
+        return f_line

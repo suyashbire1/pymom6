@@ -73,14 +73,18 @@ class test_variable(unittest.TestCase):
                     zl=slices[1],
                     xh=slices[3],
                     yh=slice(slices[2].start,
-                             slices[2].stop)).read().compute().array
+                             slices[2].stop)).read().compute()
                 xh = pdset_sub.xh
             self.assertIsInstance(xh, np.ndarray)
             self.assertIsInstance(gvvar, np.ndarray)
             self.assertTrue(np.allclose(gvvar, array))
             self.assertTrue(np.allclose(gvvar, pdvar))
             self.assertTrue(np.allclose(gvvar, pdvar2))
-            self.assertTrue(np.allclose(gvvar, pdvar3))
+            self.assertTrue(np.allclose(gvvar, pdvar3.array))
+            self.assertIsInstance(repr(pdvar3), str)
+            with pdset(self.fil1, **self.initializer) as pdset_sub:
+                pdvar4 = getattr(pdset_sub, var)
+            self.assertIsInstance(repr(pdvar4), str)
 
     def test_array_check_loc(self):
         gvvar = gv3(
