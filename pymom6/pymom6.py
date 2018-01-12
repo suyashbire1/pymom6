@@ -6,8 +6,45 @@ import xarray as xr
 from numba import jit, float32, float64
 import copy
 
-
 class Dataset():
+    def __init__(self, filename, **initializer):
+        """Creates a dataset from a single or multiple netcdf files.
+
+        :param filename: Name of the netcdf file
+        :returns: Dataset containing references to all variables in
+        the file.
+        :rtype: pymom6.Dataset
+
+        """
+        self.filename = filename
+        self.initializer = initializer
+        self.fh = mfdset(filename) if isinstance(
+            filename, list) else dset(filename)
+
+    def close(self):
+        self.fh.close()
+        self.fh = None
+
+    def __getattr__(self, var):
+        if self.fh is not None:
+            return self._variable_factory(var)
+        else:
+            raise AttributeError(f'{self.filename!r} is not open.')
+
+    def _variable_factory(self, var):
+        try:
+            variable = MOM6Variable(var, self.fh, **self.initializer)
+        except TypeError:
+            variable = self.fh.variables[var][:]
+        return variable
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.close()
+
+class Dataset1():
     def __init__(self, filename, **initializer):
         """Creates a dataset from a single or multiple netcdf files.
 
