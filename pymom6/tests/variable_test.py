@@ -495,3 +495,9 @@ class test_variable(unittest.TestCase):
                 axis[i], dim_str='test').compute()
             slc = gvvar.get_slice_2D()._slice_2D
             self.assertTrue(list(gvvar.dimensions.keys())[axis[i]] == 'test')
+
+    def test_getitem(self):
+        for var in self.vars:
+            gvvar = gv3(var, self.fh, units='m', math='1')[dict(x=-20,y=35)].read().compute()
+            self.assertTrue(gvvar.shape[2] == 1)
+            self.assertTrue(gvvar.shape[3] == 1)
