@@ -235,8 +235,14 @@ class MOM6Variable(Domain):
             self._average_DT = None
 
     def __getitem__(self, dict_):
-        for key, value in dict_.items():
-            dict_[key] = slice(value,value)
+        for key, value in list(dict_.items()):
+            if key == 'final_loc':
+                self.final_loc(value)
+                dict_.pop(key)
+            elif isinstance(value,slice):
+                pass
+            else:
+                dict_[key] = slice(value,value)
         return self.sel(**dict_)
 
 

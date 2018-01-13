@@ -147,9 +147,7 @@ class test_variable(unittest.TestCase):
             if i == 0:
                 self.assertTrue(np.all(np.isnan(gvvar[:, :, :, -1])))
             else:
-                self.assertTrue(
-                    np.all(gvvar[:, :, :, -1] == 0),
-                    msg=f'{gvvar[:, :, :, -1]}')
+                self.assertTrue(np.all(gvvar[:, :, :, -1] == 0))
 
     def test_numpy_func(self):
         for var in self.vars:
@@ -501,3 +499,9 @@ class test_variable(unittest.TestCase):
             gvvar = gv3(var, self.fh, units='m', math='1')[dict(x=-20,y=35)].read().compute()
             self.assertTrue(gvvar.shape[2] == 1)
             self.assertTrue(gvvar.shape[3] == 1)
+            gvvar = gv3(var, self.fh, units='m', math='1')[dict(final_loc='vl',Time=slice(342,357),x=-20,y=35)].read().compute(check_loc=False)
+            self.assertTrue(gvvar.shape[0] == 3)
+            self.assertTrue(gvvar.shape[2] == 1)
+            self.assertTrue(gvvar.shape[3] == 1)
+            self.assertTrue(gvvar._final_hloc == 'v')
+            self.assertTrue(gvvar._final_vloc == 'l')
