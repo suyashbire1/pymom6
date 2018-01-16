@@ -6,7 +6,6 @@ import xarray as xr
 from numba import jit, float32, float64
 import copy
 
-
 class Dataset():
     def __init__(self, filename, **initializer):
         """Creates a dataset from a single or multiple netcdf files.
@@ -19,14 +18,10 @@ class Dataset():
         """
         self.filename = filename
         self.initializer = initializer
-        self.fh = None
+        self.fh = mfdset(filename) if isinstance(
+            filename, list) else dset(filename)
 
-    def __enter__(self):
-        fil = self.filename
-        self.fh = mfdset(fil) if isinstance(fil, list) else dset(fil)
-        return self
-
-    def __exit__(self, exception_type, exception_value, traceback):
+    def close(self):
         self.fh.close()
         self.fh = None
 
@@ -42,6 +37,12 @@ class Dataset():
         except TypeError:
             variable = self.fh.variables[var][:]
         return variable
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.close()
 
 
 class GridGeometry():
@@ -69,10 +70,13 @@ def initialize_indices_and_dim_arrays(obj):
     if hasattr(obj, 'dim_arrays') is False:
         obj.dim_arrays = {}
 
-
 def find_index_limits(dimension, start, end):
     """Finds the extreme indices of the any given dimension of the domain."""
-    useful_index = np.nonzero((dimension >= start) & (dimension <= end))[0]
+    if start == end:
+        array = dimension-start
+        useful_index = np.array([1,1])*np.argmax(array[array<0])
+    else:
+        useful_index = np.nonzero((dimension >= start) & (dimension <= end))[0]
     lims = useful_index[0], useful_index[-1] + 1
     return lims
 
@@ -229,6 +233,18 @@ class MOM6Variable(Domain):
             self._average_DT = fh.variables['average_DT'][:]
         except KeyError:
             self._average_DT = None
+
+    def __getitem__(self, dict_):
+        for key, value in list(dict_.items()):
+            if key == 'final_loc':
+                self.final_loc(value)
+                dict_.pop(key)
+            elif isinstance(value,slice):
+                pass
+            else:
+                dict_[key] = slice(value,value)
+        return self.sel(**dict_)
+
 
     def sel(self, **kwargs):
         domain_mapping = {
