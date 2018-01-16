@@ -797,6 +797,7 @@ class MOM6Variable(Domain):
         to_add = other.values if (hasattr(other, 'array')
                                   and self.match_location(other)) else other
         new = copy.copy(self)
+        self.operations = []
         new.operations.append(lambda a: a + to_add)
         return new
 
@@ -807,6 +808,7 @@ class MOM6Variable(Domain):
         to_sub = other.values if (hasattr(other, 'array')
                                   and self.match_location(other)) else other
         new = copy.copy(self)
+        self.operations = []
         new.operations.append(lambda a: a - to_sub)
         return new
 
@@ -817,6 +819,7 @@ class MOM6Variable(Domain):
         to_mul = other.values if (hasattr(other, 'array')
                                   and self.match_location(other)) else other
         new = copy.copy(self)
+        self.operations = []
         new.operations.append(lambda a: a * to_mul)
         return new
 
@@ -827,6 +830,7 @@ class MOM6Variable(Domain):
         to_div = other.values if (hasattr(other, 'array')
                                   and self.match_location(other)) else other
         new = copy.copy(self)
+        self.operations = []
         new.operations.append(lambda a: a / to_div)
         return new
 
@@ -834,16 +838,19 @@ class MOM6Variable(Domain):
         to_div = other.values if (hasattr(other, 'array')
                                   and self.match_location(other)) else other
         new = copy.copy(self)
+        self.operations = []
         new.operations.append(lambda a: to_div / a)
         return new
 
     def __pow__(self, other):
         new = copy.copy(self)
+        self.operations = []
         new.operations.append(lambda a: a**other)
         return new
 
     def __neg__(self):
         new = copy.copy(self)
+        self.operations = []
         new.operations.append(lambda a: a * -1)
         return new
 
