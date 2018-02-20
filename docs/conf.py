@@ -30,7 +30,7 @@ class Mock(MagicMock):
         return MagicMock()
 
 
-MOCK_MODULES = ['netCDF4']
+MOCK_MODULES = ['netCDF4 ']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- General configuration ------------------------------------------------
