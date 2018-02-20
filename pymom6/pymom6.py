@@ -7,6 +7,14 @@ from numba import jit, float32, float64
 import copy
 
 class Dataset():
+    """Creates a dataset from a single or multiple netcdf files.
+
+    :param filename: Name of the netcdf file
+    :returns: Dataset containing references to all variables in
+    the file.
+    :rtype: pymom6.Dataset
+
+    """
     def __init__(self, filename, **initializer):
         """Creates a dataset from a single or multiple netcdf files.
 
@@ -103,6 +111,7 @@ def get_extremes(obj, dim_str, low, high, **initializer):
 
 
 class MeridionalDomain():
+    """Initializes meridional domain limits."""
     def __init__(self, **initializer):
         """Initializes meridional domain limits."""
         get_extremes(self, 'yh', 'south_lat', 'north_lat', **initializer)
@@ -110,6 +119,7 @@ class MeridionalDomain():
 
 
 class ZonalDomain():
+    """Initializes zonal domain limits."""
     def __init__(self, **initializer):
         """Initializes zonal domain limits."""
         get_extremes(self, 'xh', 'west_lon', 'east_lon', **initializer)
@@ -208,6 +218,14 @@ def get_var_at_z(array, z, e, fillvalue):
 
 
 class MOM6Variable(Domain):
+    """A MOM6 variable that is located at one of the h,u,v,q,l,i points.
+
+    :param var: name of the variable
+    :param fh: a handle to an open netCDF file
+    :returns: a variable object holding all the data
+    :rtype: MOM6Variable
+
+    """
     def __init__(self, var, fh, **initializer):
         """A MOM6 variable that is located at one of the h,u,v,q,l,i points.
 
