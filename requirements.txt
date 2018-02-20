@@ -1,1 +1,7 @@
-numpy netCDF4 xarray numba pytest-cov codecov matplotlib
+numpy
+netCDF4
+xarray
+numba
+pytest-cov
+codecov
+matplotlib
