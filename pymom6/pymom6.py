@@ -6,6 +6,7 @@ import xarray as xr
 from numba import jit, float32, float64
 import copy
 
+
 class Dataset():
     def __init__(self, filename, **initializer):
         """Creates a dataset from a single or multiple netcdf files.
@@ -18,8 +19,8 @@ class Dataset():
         """
         self.filename = filename
         self.initializer = initializer
-        self.fh = mfdset(filename) if isinstance(
-            filename, list) else dset(filename)
+        self.fh = mfdset(filename) if isinstance(filename,
+                                                 list) else dset(filename)
 
     def close(self):
         self.fh.close()
@@ -70,11 +71,12 @@ def initialize_indices_and_dim_arrays(obj):
     if hasattr(obj, 'dim_arrays') is False:
         obj.dim_arrays = {}
 
+
 def find_index_limits(dimension, start, end):
     """Finds the extreme indices of the any given dimension of the domain."""
     if start == end:
-        array = dimension-start
-        useful_index = np.array([1,1])*np.argmax(array[array<0])
+        array = dimension - start
+        useful_index = np.array([1, 1]) * np.argmax(array[array <= 0])
     else:
         useful_index = np.nonzero((dimension >= start) & (dimension <= end))[0]
     lims = useful_index[0], useful_index[-1] + 1
@@ -239,12 +241,11 @@ class MOM6Variable(Domain):
             if key == 'final_loc':
                 self.final_loc(value)
                 dict_.pop(key)
-            elif isinstance(value,slice):
+            elif isinstance(value, slice):
                 pass
             else:
-                dict_[key] = slice(value,value)
+                dict_[key] = slice(value, value)
         return self.sel(**dict_)
-
 
     def sel(self, **kwargs):
         domain_mapping = {
