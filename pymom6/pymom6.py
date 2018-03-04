@@ -16,6 +16,7 @@ class Dataset():
     :rtype: pymom6.Dataset
 
     """
+
     def __init__(self, filename, **initializer):
         """Creates a dataset from a single or multiple netcdf files.
 
@@ -114,6 +115,7 @@ def get_extremes(obj, dim_str, low, high, **initializer):
 
 class MeridionalDomain():
     """Initializes meridional domain limits."""
+
     def __init__(self, **initializer):
         """Initializes meridional domain limits."""
         get_extremes(self, 'yh', 'south_lat', 'north_lat', **initializer)
@@ -122,6 +124,7 @@ class MeridionalDomain():
 
 class ZonalDomain():
     """Initializes zonal domain limits."""
+
     def __init__(self, **initializer):
         """Initializes zonal domain limits."""
         get_extremes(self, 'xh', 'west_lon', 'east_lon', **initializer)
@@ -228,6 +231,7 @@ class MOM6Variable(Domain):
     :rtype: MOM6Variable
 
     """
+
     def __init__(self, var, fh, **initializer):
         """A MOM6 variable that is located at one of the h,u,v,q,l,i points.
 
@@ -682,6 +686,12 @@ class MOM6Variable(Domain):
         jit(float64[:, :, :, :](float64[:, :, :, :], float64[:],
                                 float64[:, :, :, :], float32))(get_var_at_z))
 
+    def conditional_toz(self, toz, z, e, dimstr='z (m)'):
+        if toz:
+            return self.toz(z, e, dimstr=dimstr)
+        else:
+            return self
+
     def toz(self, z, e, dimstr='z (m)'):
         assert self._current_hloc == e._current_hloc
         assert e._current_vloc == 'i'
@@ -749,6 +759,22 @@ class MOM6Variable(Domain):
             dim_array = R * np.radians(dim_array)
         if dim_str is None:
             dim_str = dim_str_dict[axis]
+        self.dim_arrays[dim_str] = dim_array
+        self.indices[dim_str] = 0, dim_array.size, 1
+        dims = list(self._current_dimensions)
+        dims[axis] = dim_str
+        self._current_dimensions = dims
+        return self
+
+    def tob(self, axis, dim_str=None):
+        dim_array = list(self.dimensions.items())[axis][1]
+        drhodt = -0.2
+        rho0 = 1000.0
+        g = 10
+        dbdt = -drhodt * g / rho0
+        dim_array = dbdt * (dim_array - dim_array[-1]) / drhodt
+        if dim_str is None:
+            dim_str = 'b'
         self.dim_arrays[dim_str] = dim_array
         self.indices[dim_str] = 0, dim_array.size, 1
         dims = list(self._current_dimensions)
