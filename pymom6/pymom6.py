@@ -17,14 +17,6 @@ class Dataset():
     """
 
     def __init__(self, filename, **initializer):
-        """Creates a dataset from a single or multiple netcdf files.
-
-        :param filename: Name of the netcdf file
-        :returns: Dataset containing references to all variables in
-        the file.
-        :rtype: pymom6.Dataset
-
-        """
         self.filename = filename
         self.initializer = initializer
         self.fh = mfdset(filename) if isinstance(filename,
@@ -232,14 +224,6 @@ class MOM6Variable(Domain):
     """
 
     def __init__(self, var, fh, **initializer):
-        """A MOM6 variable that is located at one of the h,u,v,q,l,i points.
-
-        :param var: name of the variable
-        :param fh: a handle to an open netCDF file
-        :returns: a variable object holding all the data
-        :rtype: MOM6Variable
-
-        """
         self._name = initializer.get('name', var)
         self._v = fh.variables[var]
         if len(self._v.dimensions) == 1 or 'nv' in self._v.dimensions:
