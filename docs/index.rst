@@ -10,4 +10,4 @@ Welcome to pymom6's documentation!
    :maxdepth: 2
 
 .. automodule:: pymom6.pymom6
-   :members:
+   :members: Dataset, MOM6Variable
