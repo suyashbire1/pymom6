@@ -7,13 +7,7 @@ Welcome to pymom6's documentation!
 ==================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
 .. automodule:: pymom6.pymom6
-   :members:
-
-.. autoclass:: Dataset
-   :members:
-
-.. autoclass:: MOM6Variable
    :members:
