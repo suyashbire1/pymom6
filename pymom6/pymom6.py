@@ -10,8 +10,7 @@ class Dataset():
     """Creates a dataset from a single or multiple netcdf files.
 
     :param filename: Name of the netcdf file
-    :returns: Dataset containing references to all variables in
-    the file.
+    :returns: Dataset containing references to all variables in the file.
     :rtype: pymom6.Dataset
 
     """
