@@ -7,6 +7,5 @@ Welcome to pymom6's documentation!
 ==================================
 
 .. toctree::
-   :maxdepth: 3
 
    pymom6
