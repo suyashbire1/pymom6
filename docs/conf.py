@@ -21,7 +21,7 @@ import os
 import sys
 from unittest.mock import MagicMock
 mypath = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath(mypath.join('../pymom6')))
+sys.path.insert(0, os.path.abspath(mypath.join('../')))
 
 
 class Mock(MagicMock):
