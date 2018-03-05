@@ -9,5 +9,4 @@ Welcome to pymom6's documentation!
 .. toctree::
    :maxdepth: 3
 
-.. automodule:: pymom6.pymom6
-   :members:
+   pymom6
