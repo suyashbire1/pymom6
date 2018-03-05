@@ -1,6 +1,5 @@
 API
 ===
 
-.. automodule:: pymom6.pymom6
+.. autoclass:: pymom6.pymom6.MOM6Variable
 
-   :members:
