@@ -1,2 +1,2 @@
-.. automodule:: pymom6.pymom6
+.. automodule:: pymom6
    :members:
