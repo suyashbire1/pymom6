@@ -102,42 +102,39 @@ class test_variable(unittest.TestCase):
             self.assertTrue(np.allclose(y, pdvar2.dimensions[yname]))
             self.assertTrue(np.allclose(x, pdvar2.dimensions[xname]))
 
-#    def test_array_sel_method(self):
-#        for var in self.vars:
-#            slices = gv3(var, self.fh,
-#                        **self.initializer).get_slice()._slice
-#            array = self.fh.variables[var][slices]
-#            with pdset(self.fil1) as pdset_sub:
-#                zname = self.fh.variables[var].dimensions[1]
-#                yname = self.fh.variables[var].dimensions[2]
-#                xname = self.fh.variables[var].dimensions[3]
-#                Time = quasimidp(self.fh.variables['Time'][2:4])
-#                z = quasimidp(self.fh.variables[zname][2:4])
-#                y = quasimidp(self.fh.variables[yname][2:4])
-#                x = quasimidp(self.fh.variables[xname][2:4])
-#                pdvar2 = getattr(pdset_sub, var).sel(t=Time, z=z, x=x, y=y).read().compute()
-#                pdvar3 = getattr(pdset_sub, var).sel(t=Time, z=z, x=x, y=y,method='higher').read().compute()
-#            array = self.fh.variables[var][2,2,2,2]
-#            Time = self.fh.variables['Time'][2]
-#            z = self.fh.variables[zname][2]
-#            y = self.fh.variables[yname][2]
-#            x = self.fh.variables[xname][2]
-#            self.assertTrue(np.allclose(Time, pdvar2.dimensions['Time']),msg=f"{Time,pdvar2.dimensions['Time']}")
-#            self.assertTrue(np.allclose(z, pdvar2.dimensions[zname]))
-#            self.assertTrue(np.allclose(y, pdvar2.dimensions[yname]))
-#            self.assertTrue(np.allclose(x, pdvar2.dimensions[xname]))
-#            self.assertTrue(np.allclose(array, pdvar2.array),msg=f'{array,pdvar2.array}')
-#
-#            array3 = self.fh.variables[var][3,3,3,3]
-#            Time = self.fh.variables['Time'][3]
-#            z = self.fh.variables[zname][3]
-#            y = self.fh.variables[yname][3]
-#            x = self.fh.variables[xname][3]
-#            self.assertTrue(np.allclose(array3, pdvar3.array),msg=f'{array,pdvar2.array}')
-#            self.assertTrue(np.allclose(Time, pdvar3.dimensions['Time']))
-#            self.assertTrue(np.allclose(z, pdvar3.dimensions[zname]))
-#            self.assertTrue(np.allclose(y, pdvar3.dimensions[yname]))
-#            self.assertTrue(np.allclose(x, pdvar3.dimensions[xname]))
+    def test_array_sel_method(self):
+        for var in self.vars:
+            with pdset(self.fil1) as pdset_sub:
+                zname = self.fh.variables[var].dimensions[1]
+                yname = self.fh.variables[var].dimensions[2]
+                xname = self.fh.variables[var].dimensions[3]
+                Time = quasimidp(self.fh.variables['Time'][2:4])
+                z = quasimidp(self.fh.variables[zname][2:4])
+                y = quasimidp(self.fh.variables[yname][2:4])
+                x = quasimidp(self.fh.variables[xname][2:4])
+                pdvar2 = getattr(pdset_sub, var).sel(t=Time, z=z, x=x, y=y).read().compute()
+                pdvar3 = getattr(pdset_sub, var).sel(t=Time, z=z, x=x, y=y,method='higher').read().compute()
+            array = self.fh.variables[var][2,2,2,2]
+            Time = self.fh.variables['Time'][2]
+            z = self.fh.variables[zname][2]
+            y = self.fh.variables[yname][2]
+            x = self.fh.variables[xname][2]
+            self.assertTrue(np.allclose(Time, pdvar2.dimensions['Time']),msg=f"{Time,pdvar2.dimensions['Time']}")
+            self.assertTrue(np.allclose(z, pdvar2.dimensions[zname]))
+            self.assertTrue(np.allclose(y, pdvar2.dimensions[yname]))
+            self.assertTrue(np.allclose(x, pdvar2.dimensions[xname]))
+            self.assertTrue(np.allclose(array, pdvar2.array),msg=f'{array,pdvar2.array}')
+
+            array3 = self.fh.variables[var][3,3,3,3]
+            Time = self.fh.variables['Time'][3]
+            z = self.fh.variables[zname][3]
+            y = self.fh.variables[yname][3]
+            x = self.fh.variables[xname][3]
+            self.assertTrue(np.allclose(array3, pdvar3.array),msg=f'{array,pdvar3.array}')
+            self.assertTrue(np.allclose(Time, pdvar3.dimensions['Time']),msg=f"{Time,pdvar3.dimensions['Time']}")
+            self.assertTrue(np.allclose(z, pdvar3.dimensions[zname]))
+            self.assertTrue(np.allclose(y, pdvar3.dimensions[yname]))
+            self.assertTrue(np.allclose(x, pdvar3.dimensions[xname]))
 
     def test_array_isel(self):
         for var in self.vars:
@@ -495,6 +492,29 @@ class test_variable(unittest.TestCase):
         self.assertTrue(gvvar._current_dimensions[1] == 'z (m)')
         self.assertTrue(np.allclose(gvvar.array[:, -1], 1e-2))
 
+    def test_var_get_atz_conditional(self):
+        e = gv3('e', self.fh, **self.initializer).get_slice().read().compute()
+        gvvar = gv3('wparam', self.fh,
+                    **self.initializer).get_slice().read().compute()
+        array = gvvar.values
+        array[:, -1] = 1e-2
+        gvvar.values = array
+        self.assertTrue(np.all(gvvar.array[:, -1] == 1e-2))
+        gvvar = gvvar.conditional_toz(True,-2400, e).compute()
+        self.assertTrue(gvvar.shape[1] == 1)
+        self.assertTrue(gvvar._current_dimensions[1] == 'z (m)')
+        self.assertTrue(np.allclose(gvvar.array[:, -1], 1e-2))
+        gvvar = gv3('wparam', self.fh,
+                    **self.initializer).get_slice().read().compute()
+        array = gvvar.values
+        array[:, -1] = 1e-2
+        gvvar.values = array
+        self.assertTrue(np.all(gvvar.array[:, -1] == 1e-2))
+        gvvar = gvvar.conditional_toz(False,-2400, e).compute()
+        self.assertTrue(gvvar.shape[1] == 10)
+        self.assertTrue(gvvar._current_dimensions[1] == 'zl')
+        self.assertTrue(np.allclose(gvvar.array[:, -1], 1e-2))
+
     def test_var_get_atz_xarray(self):
         gvvar = gv3('wparam', self.fh,
                     **self.initializer).get_slice().read().compute()
@@ -537,6 +557,16 @@ class test_variable(unittest.TestCase):
         self.assertTrue(gvvar.shape[1] == 1)
         self.assertTrue(gvvar._current_dimensions[1] == 'z (m)')
         self.assertTrue(np.any(np.isnan(gvvar.array)), msg=f'{gvvar.array}')
+
+    def test_tob(self):
+        gvvar = gv3(
+            'wparam', self.fh, fillvalue=np.nan,
+            **self.initializer).get_slice().read().tob(1, dim_str='b [units]').compute()
+        self.assertTrue(gvvar._current_dimensions[1] == 'b [units]')
+        gvvar = gv3(
+            'wparam', self.fh, fillvalue=np.nan,
+            **self.initializer).get_slice().read().tob(1).compute()
+        self.assertTrue(gvvar._current_dimensions[1] == 'b')
 
     def test_tokm(self):
         dim_str = ['x (km)', 'y (km)']

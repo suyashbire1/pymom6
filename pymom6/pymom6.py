@@ -77,13 +77,12 @@ def find_index_limits(dimension, start, end, method='lower'):
     if start == end:
         array = dimension - start
         if method == 'lower':
-            print('lhere!')
             useful_index = np.array([1, 1]) * np.argmax(array[array <= 0])
+            print(f'l, {start,dimension[:5],useful_index}')
         elif method == 'higher':
-            print('hhere!')
-            useful_index = np.array([1, 1]) * np.argmin(array[array <= 0])+1
+            useful_index = np.array([1, 1]) * (np.argmax(array[array <= 0])+1)
+            print(f'h, {start,dimension[:5],useful_index}')
         else:
-            print('nhere!')
             useful_index = np.array([1, 1]) * np.argmin(np.fabs(array))
     else:
         useful_index = np.nonzero((dimension >= start) & (dimension <= end))[0]
@@ -108,7 +107,6 @@ def get_extremes(obj, dim_str, low, high, **initializer):
             low = initializer.get(low, dimension[0])
             high = initializer.get(high, dimension[-1])
             method=initializer.get('method','lower')
-            print(method)
             obj.indices[dim_str] = *find_index_limits(dimension, low,
                                                       high,method=method), stride
         obj.dim_arrays[dim_str] = dimension
@@ -234,7 +232,6 @@ class MOM6Variable(Domain):
     """
 
     def __init__(self, var, fh, **initializer):
-        print(var)
         self._name = initializer.get('name', var)
         self._v = fh.variables[var]
         if len(self._v.dimensions) == 1 or 'nv' in self._v.dimensions:
@@ -295,7 +292,7 @@ class MOM6Variable(Domain):
                         kwargs_dom[high_mapping[possible_axis_names]] = value.stop
                     if value.step:
                         kwargs_dom['stride' + possible_axis_names[0]] = value.step
-                    kwargs_dom['method'] = kwargs.get('method')
+                    kwargs_dom['method'] = kwargs.get('method','lower')
                     domain.__init__(self, fh=self.fh, **kwargs_dom)
         return self
 
