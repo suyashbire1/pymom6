@@ -72,11 +72,19 @@ def initialize_indices_and_dim_arrays(obj):
         obj.dim_arrays = {}
 
 
-def find_index_limits(dimension, start, end):
+def find_index_limits(dimension, start, end, method='lower'):
     """Finds the extreme indices of the any given dimension of the domain."""
     if start == end:
         array = dimension - start
-        useful_index = np.array([1, 1]) * np.argmax(array[array <= 0])
+        if method == 'lower':
+            print('lhere!')
+            useful_index = np.array([1, 1]) * np.argmax(array[array <= 0])
+        elif method == 'higher':
+            print('hhere!')
+            useful_index = np.array([1, 1]) * np.argmin(array[array <= 0])+1
+        else:
+            print('nhere!')
+            useful_index = np.array([1, 1]) * np.argmin(np.fabs(array))
     else:
         useful_index = np.nonzero((dimension >= start) & (dimension <= end))[0]
     lims = useful_index[0], useful_index[-1] + 1
@@ -99,8 +107,10 @@ def get_extremes(obj, dim_str, low, high, **initializer):
         else:
             low = initializer.get(low, dimension[0])
             high = initializer.get(high, dimension[-1])
+            method=initializer.get('method','lower')
+            print(method)
             obj.indices[dim_str] = *find_index_limits(dimension, low,
-                                                      high), stride
+                                                      high,method=method), stride
         obj.dim_arrays[dim_str] = dimension
 
 
@@ -224,6 +234,7 @@ class MOM6Variable(Domain):
     """
 
     def __init__(self, var, fh, **initializer):
+        print(var)
         self._name = initializer.get('name', var)
         self._v = fh.variables[var]
         if len(self._v.dimensions) == 1 or 'nv' in self._v.dimensions:
@@ -254,56 +265,61 @@ class MOM6Variable(Domain):
 
     def sel(self, **kwargs):
         domain_mapping = {
-            'T': TemporalDomain,
-            'z': VerticalDomain,
-            'y': MeridionalDomain,
-            'x': ZonalDomain
+            ('t','Time','time','T'): TemporalDomain,
+            ('z','zl','zi'): VerticalDomain,
+            ('y','yh','yq'): MeridionalDomain,
+            ('x','xh','xq'): ZonalDomain
         }
         low_mapping = {
-            'T': 'initial_time',
-            'z': 'low_density',
-            'y': 'south_lat',
-            'x': 'west_lon'
+            ('t','Time','time','T'): 'initial_time',
+            ('z','zl','zi'): 'low_density',
+            ('y','yh','yq'): 'south_lat',
+            ('x','xh','xq'): 'west_lon'
         }
         high_mapping = {
-            'T': 'final_time',
-            'z': 'high_density',
-            'y': 'north_lat',
-            'x': 'east_lon'
+            ('t','Time','time','T'): 'final_time',
+            ('z','zl','zi'): 'high_density',
+            ('y','yh','yq'): 'north_lat',
+            ('x','xh','xq'): 'east_lon'
         }
         for key, value in kwargs.items():
-            if isinstance(value, slice):
-                axis = key[0]
-                domain = domain_mapping[axis]
-                kwargs = {}
-                if value.start:
-                    kwargs[low_mapping[axis]] = value.start
-                if value.stop:
-                    kwargs[high_mapping[axis]] = value.stop
-                if value.step:
-                    kwargs['stride' + axis.lower()] = value.step
-                domain.__init__(self, fh=self.fh, **kwargs)
+            for possible_axis_names, domain in domain_mapping.items():
+                if key in possible_axis_names:
+                    assert isinstance(value,(int,float,slice))
+                    if isinstance(value, (int,float)):
+                        value = slice(value,value)
+                    kwargs_dom = {}
+                    if value.start:
+                        kwargs_dom[low_mapping[possible_axis_names]] = value.start
+                    if value.stop:
+                        kwargs_dom[high_mapping[possible_axis_names]] = value.stop
+                    if value.step:
+                        kwargs_dom['stride' + possible_axis_names[0]] = value.step
+                    kwargs_dom['method'] = kwargs.get('method')
+                    domain.__init__(self, fh=self.fh, **kwargs_dom)
         return self
 
     def isel(self, **kwargs):
         domain_mapping = {
-            'T': TemporalDomain,
-            'z': VerticalDomain,
-            'y': MeridionalDomain,
-            'x': ZonalDomain
+            ('t','Time','time','T'): TemporalDomain,
+            ('z','zl','zi'): VerticalDomain,
+            ('y','yh','yq'): MeridionalDomain,
+            ('x','xh','xq'): ZonalDomain
         }
         for key, value in kwargs.items():
-            if isinstance(value, slice):
-                axis = key[0]
-                domain = domain_mapping[axis]
-                kwargs = {}
-                if value.start:
-                    kwargs['s' + axis.lower()] = value.start
-                if value.stop:
-                    kwargs['e' + axis.lower()] = value.stop
-                if value.step:
-                    kwargs['stride' + axis.lower()] = value.step
-                domain.__init__(self, by_index=True, fh=self.fh, **kwargs)
+            for possible_axis_names, domain in domain_mapping.items():
+                if key in possible_axis_names:
+                    assert isinstance(value,(int,slice))
+                    if isinstance(value, int):
+                        value = slice(value,value)
+                    kwargs_dom = {}
+                    if value.start:
+                        kwargs_dom['s' + possible_axis_names[0]] = value.start
+                    if value.stop:
+                        kwargs_dom['e' + possible_axis_names[0]] = value.stop
+                    if value.step:
+                        kwargs_dom['stride' + possible_axis_names[0]] = value.step
+                    domain.__init__(self, by_index=True, fh=self.fh, **kwargs_dom)
         return self
 
     def polish(self, **initializer):

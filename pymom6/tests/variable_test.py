@@ -17,6 +17,9 @@ pdset = pymom6.Dataset
 
 # pdset2 = pymom6.Dataset2
 
+def quasimidp(array):
+    assert array.size == 2
+    return 0.4*array[0] + 0.6*array[1]
 
 class test_variable(unittest.TestCase):
     def setUp(self):
@@ -58,33 +61,101 @@ class test_variable(unittest.TestCase):
         for var in self.vars:
             gvvar = gv3(var, self.fh,
                         **self.initializer).get_slice().read().compute()
-            slices = gvvar._slice
-            array = self.fh.variables[var][slices]
+            array = self.fh.variables[var][gvvar._slice]
             gvvar = gvvar.array
             with pdset(self.fil1, **self.initializer) as pdset_sub:
-                pdvar = getattr(pdset_sub, var).read().compute().array
+                pdvar = getattr(pdset_sub, var).read().compute()
+                xh = pdset_sub.xh
+            self.assertIsInstance(xh, np.ndarray)
+            self.assertIsInstance(gvvar, np.ndarray)
+            self.assertTrue(np.allclose(gvvar, array))
+            self.assertTrue(np.allclose(gvvar, pdvar.array))
+            self.assertIsInstance(repr(pdvar), str)
+            with pdset(self.fil1, **self.initializer) as pdset_sub:
+                pdvar4 = getattr(pdset_sub, var)
+            self.assertIsInstance(repr(pdvar4), str)
+
+    def test_array_sel(self):
+        for var in self.vars:
+            slices = gv3(var, self.fh,
+                        **self.initializer).get_slice()._slice
+            array = self.fh.variables[var][slices]
             with pdset(self.fil1) as pdset_sub:
-                pdvar2 = getattr(pdset_sub, var).sel(
+                pdvar = getattr(pdset_sub, var).sel(
                     xh=slice(self.west_lon, self.east_lon, 1),
                     yh=slice(self.south_lat,
                              self.north_lat)).read().compute().array
-                pdvar3 = getattr(pdset_sub, var).isel(
+            self.assertTrue(np.allclose(array, pdvar))
+            with pdset(self.fil1) as pdset_sub:
+                Time = self.fh.variables['Time'][2]
+                zname = self.fh.variables[var].dimensions[1]
+                yname = self.fh.variables[var].dimensions[2]
+                xname = self.fh.variables[var].dimensions[3]
+                z = self.fh.variables[zname][2]
+                y = self.fh.variables[yname][2]
+                x = self.fh.variables[xname][2]
+                pdvar2 = getattr(pdset_sub, var).sel(t=Time, z=z, x=x, y=y).read().compute()
+            array = self.fh.variables[var][2,2,2,2]
+            self.assertTrue(np.allclose(array, pdvar2.array))
+            self.assertTrue(np.allclose(Time, pdvar2.dimensions['Time']))
+            self.assertTrue(np.allclose(z, pdvar2.dimensions[zname]))
+            self.assertTrue(np.allclose(y, pdvar2.dimensions[yname]))
+            self.assertTrue(np.allclose(x, pdvar2.dimensions[xname]))
+
+#    def test_array_sel_method(self):
+#        for var in self.vars:
+#            slices = gv3(var, self.fh,
+#                        **self.initializer).get_slice()._slice
+#            array = self.fh.variables[var][slices]
+#            with pdset(self.fil1) as pdset_sub:
+#                zname = self.fh.variables[var].dimensions[1]
+#                yname = self.fh.variables[var].dimensions[2]
+#                xname = self.fh.variables[var].dimensions[3]
+#                Time = quasimidp(self.fh.variables['Time'][2:4])
+#                z = quasimidp(self.fh.variables[zname][2:4])
+#                y = quasimidp(self.fh.variables[yname][2:4])
+#                x = quasimidp(self.fh.variables[xname][2:4])
+#                pdvar2 = getattr(pdset_sub, var).sel(t=Time, z=z, x=x, y=y).read().compute()
+#                pdvar3 = getattr(pdset_sub, var).sel(t=Time, z=z, x=x, y=y,method='higher').read().compute()
+#            array = self.fh.variables[var][2,2,2,2]
+#            Time = self.fh.variables['Time'][2]
+#            z = self.fh.variables[zname][2]
+#            y = self.fh.variables[yname][2]
+#            x = self.fh.variables[xname][2]
+#            self.assertTrue(np.allclose(Time, pdvar2.dimensions['Time']),msg=f"{Time,pdvar2.dimensions['Time']}")
+#            self.assertTrue(np.allclose(z, pdvar2.dimensions[zname]))
+#            self.assertTrue(np.allclose(y, pdvar2.dimensions[yname]))
+#            self.assertTrue(np.allclose(x, pdvar2.dimensions[xname]))
+#            self.assertTrue(np.allclose(array, pdvar2.array),msg=f'{array,pdvar2.array}')
+#
+#            array3 = self.fh.variables[var][3,3,3,3]
+#            Time = self.fh.variables['Time'][3]
+#            z = self.fh.variables[zname][3]
+#            y = self.fh.variables[yname][3]
+#            x = self.fh.variables[xname][3]
+#            self.assertTrue(np.allclose(array3, pdvar3.array),msg=f'{array,pdvar2.array}')
+#            self.assertTrue(np.allclose(Time, pdvar3.dimensions['Time']))
+#            self.assertTrue(np.allclose(z, pdvar3.dimensions[zname]))
+#            self.assertTrue(np.allclose(y, pdvar3.dimensions[yname]))
+#            self.assertTrue(np.allclose(x, pdvar3.dimensions[xname]))
+
+    def test_array_isel(self):
+        for var in self.vars:
+            slices = gv3(var, self.fh,
+                        **self.initializer).get_slice()._slice
+            array = self.fh.variables[var][slices]
+            with pdset(self.fil1) as pdset_sub:
+                pdvar = getattr(pdset_sub, var).isel(
                     Time=slices[0],
                     zl=slices[1],
                     xh=slices[3],
                     yh=slice(slices[2].start,
                              slices[2].stop)).read().compute()
-                xh = pdset_sub.xh
-            self.assertIsInstance(xh, np.ndarray)
-            self.assertIsInstance(gvvar, np.ndarray)
-            self.assertTrue(np.allclose(gvvar, array))
-            self.assertTrue(np.allclose(gvvar, pdvar))
-            self.assertTrue(np.allclose(gvvar, pdvar2))
-            self.assertTrue(np.allclose(gvvar, pdvar3.array))
-            self.assertIsInstance(repr(pdvar3), str)
-            with pdset(self.fil1, **self.initializer) as pdset_sub:
-                pdvar4 = getattr(pdset_sub, var)
-            self.assertIsInstance(repr(pdvar4), str)
+            self.assertTrue(np.allclose(array, pdvar.array))
+            with pdset(self.fil1) as pdset_sub:
+                pdvar2 = getattr(pdset_sub, var).isel(t=1, z=6, x=10, y=25).read().compute()
+            array = self.fh.variables[var][1,6,10,25]
+            self.assertTrue(np.allclose(array, pdvar2.array))
 
     def test_array_check_loc(self):
         gvvar = gv3(
@@ -158,8 +229,7 @@ class test_variable(unittest.TestCase):
             if np.ma.isMaskedArray(var_array):
                 var_array = var_array.filled(0)
             var_array = np.mean(var_array, keepdims=True)
-            self.assertTrue(
-                np.allclose(gvvar, var_array), msg=f'{gvvar,var_array}')
+            self.assertTrue(np.allclose(gvvar, var_array))
 
     def test_numpy_func_with_move(self):
         gvvar = gv3(
