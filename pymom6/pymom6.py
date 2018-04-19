@@ -156,7 +156,8 @@ def find_index_limits(dimension, start, end, method='lower'):
         if method == 'lower':
             useful_index = np.array([1, 1]) * np.argmax(array[array <= 0])
         elif method == 'higher':
-            useful_index = np.array([1, 1]) * (np.argmax(array[array <= 0])+1)
+            useful_index = np.array([1, 1]) * (
+                np.argmax(array[array <= 0]) + 1)
         else:
             useful_index = np.array([1, 1]) * np.argmin(np.fabs(array))
     else:
@@ -191,9 +192,9 @@ def get_extremes(obj, dim_str, low, high, **initializer):
         else:
             low = initializer.get(low, dimension[0])
             high = initializer.get(high, dimension[-1])
-            method=initializer.get('method','lower')
-            obj.indices[dim_str] = *find_index_limits(dimension, low,
-                                                      high,method=method), stride
+            method = initializer.get('method', 'lower')
+            obj.indices[dim_str] = *find_index_limits(
+                dimension, low, high, method=method), stride
         obj.dim_arrays[dim_str] = dimension
 
 
@@ -349,61 +350,66 @@ class MOM6Variable(Domain):
 
     def sel(self, **kwargs):
         domain_mapping = {
-            ('t','Time','time','T'): TemporalDomain,
-            ('z','zl','zi'): VerticalDomain,
-            ('y','yh','yq'): MeridionalDomain,
-            ('x','xh','xq'): ZonalDomain
+            ('t', 'Time', 'time', 'T'): TemporalDomain,
+            ('z', 'zl', 'zi'): VerticalDomain,
+            ('y', 'yh', 'yq'): MeridionalDomain,
+            ('x', 'xh', 'xq'): ZonalDomain
         }
         low_mapping = {
-            ('t','Time','time','T'): 'initial_time',
-            ('z','zl','zi'): 'low_density',
-            ('y','yh','yq'): 'south_lat',
-            ('x','xh','xq'): 'west_lon'
+            ('t', 'Time', 'time', 'T'): 'initial_time',
+            ('z', 'zl', 'zi'): 'low_density',
+            ('y', 'yh', 'yq'): 'south_lat',
+            ('x', 'xh', 'xq'): 'west_lon'
         }
         high_mapping = {
-            ('t','Time','time','T'): 'final_time',
-            ('z','zl','zi'): 'high_density',
-            ('y','yh','yq'): 'north_lat',
-            ('x','xh','xq'): 'east_lon'
+            ('t', 'Time', 'time', 'T'): 'final_time',
+            ('z', 'zl', 'zi'): 'high_density',
+            ('y', 'yh', 'yq'): 'north_lat',
+            ('x', 'xh', 'xq'): 'east_lon'
         }
         for key, value in kwargs.items():
             for possible_axis_names, domain in domain_mapping.items():
                 if key in possible_axis_names:
-                    assert isinstance(value,(int,float,slice))
-                    if isinstance(value, (int,float)):
-                        value = slice(value,value)
+                    assert isinstance(value, (int, float, slice))
+                    if isinstance(value, (int, float)):
+                        value = slice(value, value)
                     kwargs_dom = {}
                     if value.start:
-                        kwargs_dom[low_mapping[possible_axis_names]] = value.start
+                        kwargs_dom[low_mapping[
+                            possible_axis_names]] = value.start
                     if value.stop:
-                        kwargs_dom[high_mapping[possible_axis_names]] = value.stop
+                        kwargs_dom[high_mapping[
+                            possible_axis_names]] = value.stop
                     if value.step:
-                        kwargs_dom['stride' + possible_axis_names[0]] = value.step
-                    kwargs_dom['method'] = kwargs.get('method','lower')
+                        kwargs_dom['stride'
+                                   + possible_axis_names[0]] = value.step
+                    kwargs_dom['method'] = kwargs.get('method', 'lower')
                     domain.__init__(self, fh=self.fh, **kwargs_dom)
         return self
 
     def isel(self, **kwargs):
         domain_mapping = {
-            ('t','Time','time','T'): TemporalDomain,
-            ('z','zl','zi'): VerticalDomain,
-            ('y','yh','yq'): MeridionalDomain,
-            ('x','xh','xq'): ZonalDomain
+            ('t', 'Time', 'time', 'T'): TemporalDomain,
+            ('z', 'zl', 'zi'): VerticalDomain,
+            ('y', 'yh', 'yq'): MeridionalDomain,
+            ('x', 'xh', 'xq'): ZonalDomain
         }
         for key, value in kwargs.items():
             for possible_axis_names, domain in domain_mapping.items():
                 if key in possible_axis_names:
-                    assert isinstance(value,(int,slice))
+                    assert isinstance(value, (int, slice))
                     if isinstance(value, int):
-                        value = slice(value,value)
+                        value = slice(value, value)
                     kwargs_dom = {}
                     if value.start:
                         kwargs_dom['s' + possible_axis_names[0]] = value.start
                     if value.stop:
                         kwargs_dom['e' + possible_axis_names[0]] = value.stop
                     if value.step:
-                        kwargs_dom['stride' + possible_axis_names[0]] = value.step
-                    domain.__init__(self, by_index=True, fh=self.fh, **kwargs_dom)
+                        kwargs_dom['stride'
+                                   + possible_axis_names[0]] = value.step
+                    domain.__init__(
+                        self, by_index=True, fh=self.fh, **kwargs_dom)
         return self
 
     def polish(self, **initializer):
@@ -790,8 +796,8 @@ class MOM6Variable(Domain):
 
         def lazy_toz(array):
             return self.get_var_at_z(
-                array.astype(np.float64), z,
-                e.array.astype(np.float64), float(self._fillvalue))
+                array.astype(np.float64), z, e.array.astype(np.float64),
+                float(self._fillvalue))
 
         self.operations.append(lazy_toz)
         return self
@@ -805,8 +811,10 @@ class MOM6Variable(Domain):
             fh = self._final_hloc
             cv = self._current_vloc
             fv = self._final_vloc
-            assert ch == fh, f'Cur hloc = {ch} is not final hloc = {fh}'
-            assert cv == fv, f'Cur vloc = {cv} is not final vloc = {fv}'
+            assert ch == fh, 'Cur hloc = {} is not final hloc = {}'.format(
+                ch, fh)
+            assert cv == fv, 'Cur vloc = {} is not final vloc = {}'.format(
+                cv, fv)
         return self
 
     def to_DataArray(self, check_loc=True):
@@ -878,8 +886,8 @@ class MOM6Variable(Domain):
         assert loc in ['u', 'v', 'h', 'q']
         self._current_hloc = loc
         self._current_dimensions = list(
-            self.get_dimensions_by_location(self._current_hloc +
-                                            self._current_vloc))
+            self.get_dimensions_by_location(
+                self._current_hloc + self._current_vloc))
 
     @property
     def vloc(self):
@@ -890,8 +898,8 @@ class MOM6Variable(Domain):
         assert loc in ['l', 'i']
         self._current_vloc = loc
         self._current_dimensions = list(
-            self.get_dimensions_by_location(self._current_hloc +
-                                            self._current_vloc))
+            self.get_dimensions_by_location(
+                self._current_hloc + self._current_vloc))
 
     @property
     def shape(self):
@@ -999,14 +1007,15 @@ class MOM6Variable(Domain):
         return new
 
     def __repr__(self):
-        f_line = f"""MOM6Variable: {self._name}{self._current_dimensions}"""
+        f_line = """MOM6Variable: {}{}""".format(self._name,
+                                                 self._current_dimensions)
         f_line += '\nDimensions:'
         for key, value in self.dimensions.items():
-            f_line += f'\n{key} {value.size}'
+            f_line += '\n{} {}'.format(key, value.size)
         if self.array is not None:
-            f_line += f"""\nArray: {self.values.ravel()[:4]}..."""
-            f_line += f"""\n       {self.values.ravel()[-4:]}"""
-            f_line += f"""\nShape: {self.values.shape}"""
-            f_line += f"""\nMax, Min: {np.amax(self.values)}, """
-            f_line += f"""{np.amin(self.values)}"""
+            f_line += """\nArray: {}...""".format(self.values.ravel()[:4])
+            f_line += """\n       {}""".format(self.values.ravel()[-4:])
+            f_line += """\nShape: {}""".format(self.values.shape)
+            f_line += """\nMax, Min: {}, """.format(np.amax(self.values))
+            f_line += """{}""".format(np.amin(self.values))
         return f_line
