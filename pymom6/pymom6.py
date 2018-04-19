@@ -1,3 +1,12 @@
+"""
+.. module:: pymom6
+   :platform: Unix, Windows
+   :synopsis: This module implements the Dataset and MOM6Variable classes along with some helper functions.
+
+.. moduleauthor:: Suyash Bire, SUNY Stony Brook
+
+
+"""
 import numpy as np
 from functools import partial, partialmethod
 from collections import OrderedDict
@@ -8,31 +17,63 @@ import copy
 
 
 class Dataset():
-    """Creates a dataset from a single or multiple netcdf files.
+    """This class provides more convinient access to variables of a netcdf file.
 
-    :param filename: Name of the netcdf file
-    :returns: Dataset containing references to all variables in the file.
-    :rtype: pymom6.Dataset
+    >>> ds = Dataset(filename)
+    >>> var = ds.var
+    >>> ds.close()
+
+    It can be used as a contextmanager using with statement.
+
+    >>> with Dataset(filename) as ds:
+            var = ds.var
 
     """
 
     def __init__(self, filename, **initializer):
+        """Initializes a Dataset instance
+
+        :param filename: Can be a single netcdf file or a list of netcdf files, wildcards are not accepted
+        :returns: A Dataset object containing references to all variables in the file
+        :rtype: pymom6.Dataset
+
+        """
         self.filename = filename
         self.initializer = initializer
         self.fh = mfdset(filename) if isinstance(filename,
                                                  list) else dset(filename)
 
     def close(self):
+        """Closes an open Dataset object.
+
+        :returns: None
+        :rtype: None
+
+        """
         self.fh.close()
         self.fh = None
 
     def __getattr__(self, var):
+        """Returns a MOM6Variable object or a numpy object if var is a variable in Dataset
+
+        :param var: Name of the netcdf variable
+        :returns: MOM6Variable if the variable is 4-dimensional, a numpy array otherwise
+        :rtype: pymom6.MOM6Variable or numpy.ndarray
+
+        """
         if self.fh is not None:
             return self._variable_factory(var)
         else:
             raise AttributeError(f'{self.filename!r} is not open.')
 
     def _variable_factory(self, var):
+        """Returns a MOM6Variable object or a numpy object if var is a variable in Dataset
+
+        :param var: Name of the netcdf variable
+        :returns: MOM6Variable if the variable is 4-dimensional, a numpy array otherwise
+        :rtype: pymom6.MOM6Variable or numpy.ndarray
+
+        """
         try:
             variable = MOM6Variable(var, self.fh, **self.initializer)
         except TypeError:
@@ -40,19 +81,39 @@ class Dataset():
         return variable
 
     def __enter__(self):
+        """Boilerplate for contextmanager functionality """
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
+        """Boilerplate for contextmanager functionality """
         self.close()
 
 
 class GridGeometry():
+    """This class holds the variables from ocean_geometry.nc file"""
+
     def __init__(self, filename):
+        """Creates the GridGeometry class instance.
+
+        :param filename: Name of ocean_geometry file
+        :returns: A class with references to variables of ocean_geometry.nc file
+        :rtype: pymom6.GridGeometry
+
+        """
         with dset(filename) as fh:
             for var in fh.variables:
                 setattr(self, var, fh.variables[var][:])
 
     def get_divisor_for_diff(self, loc, axis, weights=None):
+        """This method rerturs a divisor to the divide_by, multiply_by, and dbyd methods of MOM6Variable class
+
+        :param loc: grid location of the MOM6Variable (one of u,v,h,q and one of l,i, See docs of MOM6Variable)
+        :param axis: Integer between 0 to 3 specifying the axis
+        :param weights: can be None or 'area'
+        :returns: divisor for divide_by, multiply_by, and dbyd methods of MOM6Variable class
+        :rtype: numpy.ndarray
+
+        """
         axis = axis - 2
         divisors = dict(
             u=['dyCu', 'dxCu'],
@@ -66,6 +127,13 @@ class GridGeometry():
 
 
 def initialize_indices_and_dim_arrays(obj):
+    """Initializes empty dicts to hold indices and dim_arrays
+
+    :param obj: MOM6Variable instance
+    :returns: None
+    :rtype: None
+
+    """
     if hasattr(obj, 'indices') is False:
         obj.indices = {}
     if hasattr(obj, 'dim_arrays') is False:
@@ -73,7 +141,16 @@ def initialize_indices_and_dim_arrays(obj):
 
 
 def find_index_limits(dimension, start, end, method='lower'):
-    """Finds the extreme indices of the any given dimension of the domain."""
+    """Finds the extreme indices of any dimension between a start and end point
+
+    :param dimension: 1D numpy array
+    :param start: start point
+    :param end: end point
+    :param method: 'lower' or 'higher'
+    :returns: tuple with indices corresponding to start and end if start and end are distinct
+    :rtype: tuple
+
+    """
     if start == end:
         array = dimension - start
         if method == 'lower':
@@ -91,6 +168,16 @@ def find_index_limits(dimension, start, end, method='lower'):
 
 
 def get_extremes(obj, dim_str, low, high, **initializer):
+    """Populates indices and dim_arrays of MOM6Variable
+
+    :param obj: MOM6Variable instance
+    :param dim_str: string representing the name of the dimension
+    :param low: lower bound of the domain along dimension
+    :param high: higher bound of the domain along dimension
+    :returns: None
+    :rtype: None
+
+    """
     initialize_indices_and_dim_arrays(obj)
     fh = initializer.get('fh')
     axis_str = dim_str[0].lower()
@@ -222,6 +309,9 @@ def get_var_at_z(array, z, e, fillvalue):
 
 
 class MOM6Variable(Domain):
+    """A class to hold a variable from netcdf file generated by MOM6."""
+
+    def __init__(self, var, fh, **initializer):
     """A MOM6 variable that is located at one of the h,u,v,q,l,i points.
 
     :param var: name of the variable
@@ -230,8 +320,6 @@ class MOM6Variable(Domain):
     :rtype: MOM6Variable
 
     """
-
-    def __init__(self, var, fh, **initializer):
         self._name = initializer.get('name', var)
         self._v = fh.variables[var]
         if len(self._v.dimensions) == 1 or 'nv' in self._v.dimensions:
