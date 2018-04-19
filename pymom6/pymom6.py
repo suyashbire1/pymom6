@@ -64,7 +64,7 @@ class Dataset():
         if self.fh is not None:
             return self._variable_factory(var)
         else:
-            raise AttributeError(f'{self.filename!r} is not open.')
+            raise AttributeError('{} is not open.'.format(self.filename))
 
     def _variable_factory(self, var):
         """Returns a MOM6Variable object or a numpy object if var is a variable in Dataset
@@ -155,10 +155,8 @@ def find_index_limits(dimension, start, end, method='lower'):
         array = dimension - start
         if method == 'lower':
             useful_index = np.array([1, 1]) * np.argmax(array[array <= 0])
-            print(f'l, {start,dimension[:5],useful_index}')
         elif method == 'higher':
             useful_index = np.array([1, 1]) * (np.argmax(array[array <= 0])+1)
-            print(f'h, {start,dimension[:5],useful_index}')
         else:
             useful_index = np.array([1, 1]) * np.argmin(np.fabs(array))
     else:
