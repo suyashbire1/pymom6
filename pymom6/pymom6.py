@@ -126,94 +126,94 @@ class GridGeometry():
         return getattr(self, divisors[loc][axis])
 
 
-def _initialize_indices_and_dim_arrays(obj):
-    """Initializes empty dicts to hold indices and dim_arrays
+class Domain():
+    def _initialize_indices_and_dim_arrays(self):
+        """Initializes empty dicts to hold indices and dim_arrays
 
-    :param obj: MOM6Variable instance
-    :returns: None
-    :rtype: None
+        :param self: MOM6Variable instance
+        :returns: None
+        :rtype: None
 
-    """
-    if hasattr(obj, 'indices') is False:
-        obj.indices = {}
-    if hasattr(obj, 'dim_arrays') is False:
-        obj.dim_arrays = {}
+        """
+        if hasattr(self, 'indices') is False:
+            self.indices = {}
+        if hasattr(self, 'dim_arrays') is False:
+            self.dim_arrays = {}
 
+    @staticmethod
+    def _find_index_limits(dimension, start, end, method='lower'):
+        """Finds the extreme indices of any dimension between a start and end point
 
-def _find_index_limits(dimension, start, end, method='lower'):
-    """Finds the extreme indices of any dimension between a start and end point
+        :param dimension: 1D numpy array
+        :param start: start point
+        :param end: end point
+        :param method: 'lower' or 'higher'
+        :returns: tuple with indices corresponding to start and end if start and end are distinct
+        :rtype: tuple
 
-    :param dimension: 1D numpy array
-    :param start: start point
-    :param end: end point
-    :param method: 'lower' or 'higher'
-    :returns: tuple with indices corresponding to start and end if start and end are distinct
-    :rtype: tuple
-
-    """
-    if start == end:
-        array = dimension - start
-        if method == 'lower':
-            useful_index = np.array([1, 1]) * np.argmax(array[array <= 0])
-        elif method == 'higher':
-            useful_index = np.array([1, 1]) * (
-                np.argmax(array[array <= 0]) + 1)
+        """
+        if start == end:
+            array = dimension - start
+            if method == 'lower':
+                useful_index = np.array([1, 1]) * np.argmax(array[array <= 0])
+            elif method == 'higher':
+                useful_index = np.array([1, 1]) * (
+                    np.argmax(array[array <= 0]) + 1)
+            else:
+                useful_index = np.array([1, 1]) * np.argmin(np.fabs(array))
         else:
-            useful_index = np.array([1, 1]) * np.argmin(np.fabs(array))
-    else:
-        useful_index = np.nonzero((dimension >= start) & (dimension <= end))[0]
-    lims = useful_index[0], useful_index[-1] + 1
-    return lims
+            useful_index = np.nonzero((dimension >= start) &
+                                      (dimension <= end))[0]
+        lims = useful_index[0], useful_index[-1] + 1
+        return lims
+
+    def get_extremes(self, dim_str, low, high, **initializer):
+        """Populates indices and dim_arrays of MOM6Variable
+
+        :param self: MOM6Variable instance
+        :param dim_str: string representing the name of the dimension
+        :param low: lower bound of the domain along dimension
+        :param high: higher bound of the domain along dimension
+        :returns: None
+        :rtype: None
+
+        """
+        self._initialize_indices_and_dim_arrays()
+        fh = initializer.get('fh')
+        axis_str = dim_str[0].lower()
+        stride = initializer.get('stride' + axis_str, 1)
+        by_index = initializer.get('by_index', False)
+        if dim_str in fh.variables:
+            dimension = fh.variables[dim_str][:]
+            if by_index:
+                self.indices[dim_str] = initializer.get(
+                    's' + axis_str, 0), initializer.get(
+                        'e' + axis_str, dimension.size), stride
+            else:
+                low = initializer.get(low, dimension[0])
+                high = initializer.get(high, dimension[-1])
+                method = initializer.get('method', 'lower')
+                self.indices[dim_str] = *self._find_index_limits(
+                    dimension, low, high, method=method), stride
+            self.dim_arrays[dim_str] = dimension
 
 
-def get_extremes(obj, dim_str, low, high, **initializer):
-    """Populates indices and dim_arrays of MOM6Variable
-
-    :param obj: MOM6Variable instance
-    :param dim_str: string representing the name of the dimension
-    :param low: lower bound of the domain along dimension
-    :param high: higher bound of the domain along dimension
-    :returns: None
-    :rtype: None
-
-    """
-    _initialize_indices_and_dim_arrays(obj)
-    fh = initializer.get('fh')
-    axis_str = dim_str[0].lower()
-    stride = initializer.get('stride' + axis_str, 1)
-    by_index = initializer.get('by_index', False)
-    if dim_str in fh.variables:
-        dimension = fh.variables[dim_str][:]
-        if by_index:
-            obj.indices[dim_str] = initializer.get('s' + axis_str,
-                                                   0), initializer.get(
-                                                       'e' + axis_str,
-                                                       dimension.size), stride
-        else:
-            low = initializer.get(low, dimension[0])
-            high = initializer.get(high, dimension[-1])
-            method = initializer.get('method', 'lower')
-            obj.indices[dim_str] = *_find_index_limits(
-                dimension, low, high, method=method), stride
-        obj.dim_arrays[dim_str] = dimension
-
-
-class MeridionalDomain():
+class MeridionalDomain(Domain):
     """Initializes meridional domain limits."""
 
     def __init__(self, **initializer):
         """Initializes meridional domain limits."""
-        get_extremes(self, 'yh', 'south_lat', 'north_lat', **initializer)
-        get_extremes(self, 'yq', 'south_lat', 'north_lat', **initializer)
+        self.get_extremes('yh', 'south_lat', 'north_lat', **initializer)
+        self.get_extremes('yq', 'south_lat', 'north_lat', **initializer)
 
 
-class ZonalDomain():
+class ZonalDomain(Domain):
     """Initializes zonal domain limits."""
 
     def __init__(self, **initializer):
         """Initializes zonal domain limits."""
-        get_extremes(self, 'xh', 'west_lon', 'east_lon', **initializer)
-        get_extremes(self, 'xq', 'west_lon', 'east_lon', **initializer)
+        self.get_extremes('xh', 'west_lon', 'east_lon', **initializer)
+        self.get_extremes('xq', 'west_lon', 'east_lon', **initializer)
 
 
 class HorizontalDomain(MeridionalDomain, ZonalDomain):
@@ -222,15 +222,15 @@ class HorizontalDomain(MeridionalDomain, ZonalDomain):
         ZonalDomain.__init__(self, **initializer)
 
 
-class VerticalDomain():
+class VerticalDomain(Domain):
     def __init__(self, **initializer):
-        get_extremes(self, 'zl', 'low_density', 'high_density', **initializer)
-        get_extremes(self, 'zi', 'low_density', 'high_density', **initializer)
+        self.get_extremes('zl', 'low_density', 'high_density', **initializer)
+        self.get_extremes('zi', 'low_density', 'high_density', **initializer)
 
 
-class TemporalDomain():
+class TemporalDomain(Domain):
     def __init__(self, **initializer):
-        get_extremes(self, 'Time', 'initial_time', 'final_time', **initializer)
+        self.get_extremes('Time', 'initial_time', 'final_time', **initializer)
 
 
 class Domain(TemporalDomain, VerticalDomain, HorizontalDomain):
