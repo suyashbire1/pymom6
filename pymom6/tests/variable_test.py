@@ -1,8 +1,4 @@
-import sys
-import os
-myPath = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, myPath + '/../')
-import pymom6
+from context import pymom6
 from netCDF4 import Dataset as dset, MFDataset as mfdset
 import numpy as np
 import xarray as xr

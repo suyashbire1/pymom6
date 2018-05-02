@@ -1,5 +1,4 @@
-# from pymom6 import pymom6
-import pymom6
+from context import pymom6
 from netCDF4 import Dataset as dset
 import numpy as np
 import unittest

@@ -1,8 +1,4 @@
-import sys
-import os
-myPath = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, myPath + '/../')
-import pymom6
+from context import pymom6
 import os.path
 import numpy as np
 np.seterr(divide='ignore', invalid='ignore')

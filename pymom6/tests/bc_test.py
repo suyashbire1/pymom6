@@ -1,8 +1,4 @@
-import sys
-import os
-myPath = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, myPath + '/../')
-import pymom6
+from context import pymom6
 import numpy as np
 import pytest
 gv3 = pymom6.MOM6Variable

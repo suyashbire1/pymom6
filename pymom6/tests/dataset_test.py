@@ -1,4 +1,4 @@
-import pymom6
+from context import pymom6
 import pytest
 import os.path
 import numpy as np
