@@ -104,7 +104,7 @@ class GridGeometry():
             for var in fh.variables:
                 setattr(self, var, fh.variables[var][:])
 
-    def get_divisor_for_diff(self, loc, axis, weights=None):
+    def _get_divisor_for_diff(self, loc, axis, weights=None):
         """This method rerturs a divisor to the divide_by, multiply_by, and dbyd methods of MOM6Variable class
 
         :param loc: grid location of the MOM6Variable (one of u,v,h,q and one of l,i, See docs of MOM6Variable)
@@ -126,7 +126,7 @@ class GridGeometry():
         return getattr(self, divisors[loc][axis])
 
 
-def initialize_indices_and_dim_arrays(obj):
+def _initialize_indices_and_dim_arrays(obj):
     """Initializes empty dicts to hold indices and dim_arrays
 
     :param obj: MOM6Variable instance
@@ -140,7 +140,7 @@ def initialize_indices_and_dim_arrays(obj):
         obj.dim_arrays = {}
 
 
-def find_index_limits(dimension, start, end, method='lower'):
+def _find_index_limits(dimension, start, end, method='lower'):
     """Finds the extreme indices of any dimension between a start and end point
 
     :param dimension: 1D numpy array
@@ -177,7 +177,7 @@ def get_extremes(obj, dim_str, low, high, **initializer):
     :rtype: None
 
     """
-    initialize_indices_and_dim_arrays(obj)
+    _initialize_indices_and_dim_arrays(obj)
     fh = initializer.get('fh')
     axis_str = dim_str[0].lower()
     stride = initializer.get('stride' + axis_str, 1)
@@ -193,7 +193,7 @@ def get_extremes(obj, dim_str, low, high, **initializer):
             low = initializer.get(low, dimension[0])
             high = initializer.get(high, dimension[-1])
             method = initializer.get('method', 'lower')
-            obj.indices[dim_str] = *find_index_limits(
+            obj.indices[dim_str] = *_find_index_limits(
                 dimension, low, high, method=method), stride
         obj.dim_arrays[dim_str] = dimension
 
@@ -260,7 +260,7 @@ class BoundaryCondition():
         self.start_or_end = start_or_end
 
     def set_halo_indices(self):
-        if self.bc_type == 'circsymq':
+        if self.bc_type == 'dirichletq':
             take_index = 1 if self.start_or_end == 0 else -2
         else:
             take_index = self.start_or_end
@@ -273,7 +273,7 @@ class BoundaryCondition():
             self.halo = np.zeros(self.halo.shape)
 
     def boudary_condition_type(self):
-        if self.bc_type != 'mirror':
+        if self.bc_type != 'neumann':
             self.halo = -self.halo
 
     def append_halo_to_array(self, array):
@@ -558,10 +558,21 @@ class MOM6Variable(Domain):
 
     BoundaryCondition = BoundaryCondition
     _default_bc_type = dict(
-        u=['mirror', 'circsymh', 'circsymh', 'circsymh', 'zeros', 'circsymq'],
-        v=['mirror', 'circsymh', 'zeros', 'circsymq', 'circsymh', 'circsymh'],
-        h=['mirror', 'circsymh', 'mirror', 'mirror', 'mirror', 'mirror'],
-        q=['mirror', 'circsymh', 'zeros', 'circsymq', 'zeros', 'circsymq'])
+        u=[
+            'neumann', 'dirichleth', 'dirichleth', 'dirichleth', 'zeros',
+            'dirichletq'
+        ],
+        v=[
+            'neumann', 'dirichleth', 'zeros', 'dirichletq', 'dirichleth',
+            'dirichleth'
+        ],
+        h=[
+            'neumann', 'dirichleth', 'neumann', 'neumann', 'neumann', 'neumann'
+        ],
+        q=[
+            'neumann', 'dirichleth', 'zeros', 'dirichletq', 'zeros',
+            'dirichletq'
+        ])
 
     def implement_BC_if_necessary(self):
         dims = self._final_dimensions
@@ -659,7 +670,7 @@ class MOM6Variable(Domain):
                 self._current_hloc, axis=axis)
             self.adjust_dimensions_and_indices_for_horizontal_move(
                 axis, ns, ne)
-            divisor = self._geometry.get_divisor_for_diff(
+            divisor = self._geometry._get_divisor_for_diff(
                 self._current_hloc, axis, weights=weights)
             self.get_slice_2D()
             divisor = divisor[self._slice_2D]

@@ -14,7 +14,7 @@ def start_or_end(request):
     return request.param
 
 
-@pytest.fixture(params=['zeros', 'mirror', 'circsymh', 'circsymq'])
+@pytest.fixture(params=['zeros', 'neumann', 'dirichleth', 'dirichletq'])
 def bc_type(request):
     return request.param
 
@@ -23,7 +23,7 @@ def test_create_halo(bc_type, axis, start_or_end):
     dummy_array = np.arange(2 * 3 * 5 * 7).reshape(2, 3, 5, 7)
     dummy_BC = pymom6.BoundaryCondition(bc_type, axis, start_or_end)
     dummy_BC.create_halo(dummy_array)
-    if dummy_BC.bc_type == 'circsymq':
+    if dummy_BC.bc_type == 'dirichletq':
         take_index = 1 if start_or_end == 0 else -2
         compare_array = dummy_array.take([take_index], axis=axis)
     elif dummy_BC.bc_type == 'zeros':
@@ -40,9 +40,9 @@ def test_dummy_BC_append_halo(bc_type, axis, start_or_end):
     dummy_BC.create_halo(dummy_array)
     array = dummy_BC.append_halo_to_array(dummy_array)
     if start_or_end == 0:
-        if bc_type == 'circsymq':
+        if bc_type == 'dirichletq':
             array1 = -dummy_array.take([1], axis=axis)
-        elif bc_type == 'circsymh':
+        elif bc_type == 'dirichleth':
             array1 = -dummy_array.take([start_or_end], axis=axis)
         elif dummy_BC.bc_type == 'zeros':
             array1 = np.zeros(
@@ -52,9 +52,9 @@ def test_dummy_BC_append_halo(bc_type, axis, start_or_end):
         array2 = dummy_array
     elif start_or_end == -1:
         array1 = dummy_array
-        if bc_type == 'circsymq':
+        if bc_type == 'dirichletq':
             array2 = -dummy_array.take([-2], axis=axis)
-        elif bc_type == 'circsymh':
+        elif bc_type == 'dirichleth':
             array2 = -dummy_array.take([start_or_end], axis=axis)
         elif dummy_BC.bc_type == 'zeros':
             array2 = np.zeros(
