@@ -29,7 +29,7 @@ class test_domain(unittest.TestCase):
             var = 'y' + loc
             lat = self.fh.variables[var][:]
             lat_restricted = lat[(lat >= self.slat) & (lat <= self.nlat)]
-            a, b, c = pymom6.MeridionalDomain(
+            a, b, c = pymom6._MeridionalDomain(
                 **self.initializer).indices['y' + loc]
             self.assertTrue(np.allclose(lat_restricted, lat[a:b:c]))
 
@@ -38,7 +38,8 @@ class test_domain(unittest.TestCase):
             var = 'x' + loc
             lon = self.fh.variables[var][:]
             lon_restricted = lon[(lon >= self.wlon) & (lon <= self.elon)]
-            a, b, c = pymom6.ZonalDomain(**self.initializer).indices['x' + loc]
+            a, b, c = pymom6._ZonalDomain(**self.initializer).indices['x'
+                                                                      + loc]
             self.assertTrue(np.allclose(lon_restricted, lon[a:b:c]))
 
     def test_stride_meridional_domain(self):
@@ -49,7 +50,7 @@ class test_domain(unittest.TestCase):
                 lat = self.fh.variables[var][:]
                 lat_restricted = lat[(lat >= self.slat) & (lat <= self.nlat)]
                 lat_restricted = lat_restricted[::stride]
-                a, b, c = pymom6.MeridionalDomain(
+                a, b, c = pymom6._MeridionalDomain(
                     **self.initializer).indices['y' + loc]
                 self.assertTrue(np.allclose(lat_restricted, lat[a:b:c]))
 
@@ -61,12 +62,12 @@ class test_domain(unittest.TestCase):
                 lon = self.fh.variables[var][:]
                 lon_restricted = lon[(lon >= self.wlon) & (lon <= self.elon)]
                 lon_restricted = lon_restricted[::stride]
-                a, b, c = pymom6.ZonalDomain(**self.initializer).indices['x'
-                                                                         + loc]
+                a, b, c = pymom6._ZonalDomain(
+                    **self.initializer).indices['x' + loc]
                 self.assertTrue(np.allclose(lon_restricted, lon[a:b:c]))
 
     def test_horizontal_domain(self):
-        hdomain = pymom6.HorizontalDomain(**self.initializer)
+        hdomain = pymom6._HorizontalDomain(**self.initializer)
         self.initializer['stridex'] = 1
         self.initializer['stridey'] = 1
         for loc in ['h', 'q']:
@@ -85,12 +86,12 @@ class test_domain(unittest.TestCase):
     def test_vertical_domain(self):
         zl = self.fh.variables['zl'][:]
         zi = self.fh.variables['zi'][:]
-        a, b, c = pymom6.VerticalDomain(**self.initializer).indices['zl']
+        a, b, c = pymom6._VerticalDomain(**self.initializer).indices['zl']
         self.assertEqual(a, 0)
         self.assertEqual(b, len(zl))
         self.assertEqual(c, 1)
         self.assertTrue(np.allclose(zl, zl[a:b:c]))
-        a, b, c = pymom6.VerticalDomain(**self.initializer).indices['zi']
+        a, b, c = pymom6._VerticalDomain(**self.initializer).indices['zi']
         self.assertEqual(a, 0)
         self.assertEqual(b, len(zi))
         self.assertEqual(c, 1)
@@ -99,7 +100,7 @@ class test_domain(unittest.TestCase):
     def test_stride_vertical_domain(self):
         for stride in [2, 4]:
             self.initializer['stridez'] = stride
-            vertdom = pymom6.VerticalDomain(**self.initializer)
+            vertdom = pymom6._VerticalDomain(**self.initializer)
             a, b, c = vertdom.indices['zl']
             self.assertEqual(c, stride)
             a, b, c = vertdom.indices['zi']
@@ -107,7 +108,7 @@ class test_domain(unittest.TestCase):
 
     def test_temporal_domain(self):
         Time = self.fh.variables['Time'][:]
-        a, b, c = pymom6.TemporalDomain(**self.initializer).indices['Time']
+        a, b, c = pymom6._TemporalDomain(**self.initializer).indices['Time']
         self.assertEqual(a, 0)
         self.assertEqual(b, len(Time))
         self.assertEqual(c, 1)
@@ -116,7 +117,7 @@ class test_domain(unittest.TestCase):
     def test_stride_temporal_domain(self):
         for stride in [2, 4]:
             self.initializer['stridet'] = stride
-            tdom = pymom6.TemporalDomain(**self.initializer)
+            tdom = pymom6._TemporalDomain(**self.initializer)
             a, b, c = tdom.indices['Time']
             self.assertEqual(c, stride)
 
@@ -124,7 +125,7 @@ class test_domain(unittest.TestCase):
         zl = self.fh.variables['zl'][:]
         zi = self.fh.variables['zi'][:]
         Time = self.fh.variables['Time'][:]
-        domain = pymom6.Domain(**self.initializer)
+        domain = pymom6._txyzDomain(**self.initializer)
         self.assertEqual(domain.indices['Time'], (0, len(Time), 1))
         self.assertEqual(domain.indices['zl'], (0, len(zl), 1))
         self.assertEqual(domain.indices['zi'], (0, len(zi), 1))
@@ -145,7 +146,7 @@ class test_domain(unittest.TestCase):
         zl = self.fh.variables['zl'][:]
         zi = self.fh.variables['zi'][:]
         Time = self.fh.variables['Time'][:]
-        domain = pymom6.Domain(**self.initializer2)
+        domain = pymom6._txyzDomain(**self.initializer2)
         self.assertEqual(domain.indices['Time'], (0, len(Time), 1))
         self.assertEqual(domain.indices['zl'], (0, len(zl), 1))
         self.assertEqual(domain.indices['zi'], (0, len(zi), 1))
