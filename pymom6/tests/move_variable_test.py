@@ -667,7 +667,7 @@ class test_move(unittest.TestCase):
             self.assertTrue(value.size == gvvar.shape[j])
         e = self.fh.variables['e'][:]
         zi = self.fh.variables['zi'][:]
-        db = 9.8 / 1031 * (zi[3] - zi[2])
+        db = -10 / 1000 * (zi[3] - zi[2])
         de = np.diff(e, axis=1) / db
         self.assertTrue(np.allclose(de, gvvar))
 
@@ -686,7 +686,7 @@ class test_move(unittest.TestCase):
             u = u.filled(0)
         u = np.concatenate((u[:, :1, :, :], u, -u[:, -1:, :, :]), axis=1)
         zi = self.fh.variables['zi'][:]
-        db = 9.8 / 1031 * (zi[3] - zi[2])
+        db = -10 / 1000 * (zi[3] - zi[2])
         du = np.diff(u, axis=1) / db
         self.assertTrue(np.allclose(du, gvvar))
 
