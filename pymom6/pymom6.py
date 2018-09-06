@@ -157,8 +157,8 @@ class Domain():
             if method == 'lower':
                 useful_index = np.array([1, 1]) * np.argmax(array[array <= 0])
             elif method == 'higher':
-                useful_index = np.array([1, 1]) * (
-                    np.argmax(array[array <= 0]) + 1)
+                useful_index = np.array(
+                    [1, 1]) * (np.argmax(array[array <= 0]) + 1)
             else:
                 useful_index = np.array([1, 1]) * np.argmin(np.fabs(array))
         else:
@@ -217,23 +217,31 @@ class _ZonalDomain(Domain):
 
 
 class _HorizontalDomain(_MeridionalDomain, _ZonalDomain):
+    """Initializes horizontal domain limits."""
+
     def __init__(self, **initializer):
         _MeridionalDomain.__init__(self, **initializer)
         _ZonalDomain.__init__(self, **initializer)
 
 
 class _VerticalDomain(Domain):
+    """Initializes vertical domain limits."""
+
     def __init__(self, **initializer):
         self.get_extremes('zl', 'low_density', 'high_density', **initializer)
         self.get_extremes('zi', 'low_density', 'high_density', **initializer)
 
 
 class _TemporalDomain(Domain):
+    """Initializes temporal domain limits."""
+
     def __init__(self, **initializer):
         self.get_extremes('Time', 'initial_time', 'final_time', **initializer)
 
 
 class _txyzDomain(_TemporalDomain, _VerticalDomain, _HorizontalDomain):
+    """Initializes temporal, vertical, and horizontal domain limits."""
+
     def __init__(self, **initializer):
         _TemporalDomain.__init__(self, **initializer)
         _VerticalDomain.__init__(self, **initializer)
@@ -241,6 +249,9 @@ class _txyzDomain(_TemporalDomain, _VerticalDomain, _HorizontalDomain):
 
 
 class LazyNumpyOperation():
+    """This class provides lazy numpy operations for MOM6Variable. This
+    class should not be used on its own."""
+
     def __init__(self, func, *args, **kwargs):
         self.func = func
         self.args = args
@@ -254,6 +265,9 @@ class LazyNumpyOperation():
 
 
 class BoundaryCondition():
+    """This class provides boundary conditions for MOM6Variable. This
+    class should not be used on its own."""
+
     def __init__(self, bc_type, axis, start_or_end):
         self.bc_type = bc_type
         self.axis = axis
@@ -407,8 +421,8 @@ class MOM6Variable(_txyzDomain):
                         kwargs_dom[high_mapping[
                             possible_axis_names]] = value.stop
                     if value.step:
-                        kwargs_dom['stride'
-                                   + possible_axis_names[0]] = value.step
+                        kwargs_dom['stride' +
+                                   possible_axis_names[0]] = value.step
                     kwargs_dom['method'] = kwargs.get('method', 'lower')
                     domain.__init__(self, fh=self.fh, **kwargs_dom)
         return self
@@ -450,8 +464,8 @@ class MOM6Variable(_txyzDomain):
                     if value.stop:
                         kwargs_dom['e' + possible_axis_names[0]] = value.stop
                     if value.step:
-                        kwargs_dom['stride'
-                                   + possible_axis_names[0]] = value.step
+                        kwargs_dom['stride' +
+                                   possible_axis_names[0]] = value.step
                     domain.__init__(
                         self, by_index=True, fh=self.fh, **kwargs_dom)
         return self
@@ -941,8 +955,8 @@ class MOM6Variable(_txyzDomain):
         assert loc in ['u', 'v', 'h', 'q']
         self._current_hloc = loc
         self._current_dimensions = list(
-            self.get_dimensions_by_location(
-                self._current_hloc + self._current_vloc))
+            self.get_dimensions_by_location(self._current_hloc +
+                                            self._current_vloc))
 
     @property
     def vloc(self):
@@ -953,8 +967,8 @@ class MOM6Variable(_txyzDomain):
         assert loc in ['l', 'i']
         self._current_vloc = loc
         self._current_dimensions = list(
-            self.get_dimensions_by_location(
-                self._current_hloc + self._current_vloc))
+            self.get_dimensions_by_location(self._current_hloc +
+                                            self._current_vloc))
 
     @property
     def shape(self):
