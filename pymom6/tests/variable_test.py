@@ -83,13 +83,13 @@ class test_variable(unittest.TestCase):
                              self.north_lat)).read().compute().array
             self.assertTrue(np.allclose(array, pdvar))
             with pdset(self.fil1) as pdset_sub:
-                Time = self.fh.variables['Time'][2]
+                Time = np.add.reduce(self.fh.variables['Time'][2].data)
                 zname = self.fh.variables[var].dimensions[1]
                 yname = self.fh.variables[var].dimensions[2]
                 xname = self.fh.variables[var].dimensions[3]
-                z = self.fh.variables[zname][2]
-                y = self.fh.variables[yname][2]
-                x = self.fh.variables[xname][2]
+                z = np.add.reduce(self.fh.variables[zname][2].data)
+                y = np.add.reduce(self.fh.variables[yname][2].data)
+                x = np.add.reduce(self.fh.variables[xname][2].data)
                 pdvar2 = getattr(pdset_sub, var).sel(t=Time, z=z, x=x, y=y).read().compute()
             array = self.fh.variables[var][2,2,2,2]
             self.assertTrue(np.allclose(array, pdvar2.array))
