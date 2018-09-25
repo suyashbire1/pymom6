@@ -167,7 +167,7 @@ class Domain():
         lims = useful_index[0], useful_index[-1] + 1
         return lims
 
-    def get_extremes(self, dim_str, low, high, **initializer):
+    def _get_extremes(self, dim_str, low, high, **initializer):
         """Populates indices and dim_arrays of MOM6Variable
 
         :param self: MOM6Variable instance
@@ -203,8 +203,8 @@ class _MeridionalDomain(Domain):
 
     def __init__(self, **initializer):
         """Initializes meridional domain limits."""
-        self.get_extremes('yh', 'south_lat', 'north_lat', **initializer)
-        self.get_extremes('yq', 'south_lat', 'north_lat', **initializer)
+        self._get_extremes('yh', 'south_lat', 'north_lat', **initializer)
+        self._get_extremes('yq', 'south_lat', 'north_lat', **initializer)
 
 
 class _ZonalDomain(Domain):
@@ -212,8 +212,8 @@ class _ZonalDomain(Domain):
 
     def __init__(self, **initializer):
         """Initializes zonal domain limits."""
-        self.get_extremes('xh', 'west_lon', 'east_lon', **initializer)
-        self.get_extremes('xq', 'west_lon', 'east_lon', **initializer)
+        self._get_extremes('xh', 'west_lon', 'east_lon', **initializer)
+        self._get_extremes('xq', 'west_lon', 'east_lon', **initializer)
 
 
 class _HorizontalDomain(_MeridionalDomain, _ZonalDomain):
@@ -228,15 +228,15 @@ class _VerticalDomain(Domain):
     """Initializes vertical domain limits."""
 
     def __init__(self, **initializer):
-        self.get_extremes('zl', 'low_density', 'high_density', **initializer)
-        self.get_extremes('zi', 'low_density', 'high_density', **initializer)
+        self._get_extremes('zl', 'low_density', 'high_density', **initializer)
+        self._get_extremes('zi', 'low_density', 'high_density', **initializer)
 
 
 class _TemporalDomain(Domain):
     """Initializes temporal domain limits."""
 
     def __init__(self, **initializer):
-        self.get_extremes('Time', 'initial_time', 'final_time', **initializer)
+        self._get_extremes('Time', 'initial_time', 'final_time', **initializer)
 
 
 class _txyzDomain(_TemporalDomain, _VerticalDomain, _HorizontalDomain):
@@ -248,7 +248,7 @@ class _txyzDomain(_TemporalDomain, _VerticalDomain, _HorizontalDomain):
         _HorizontalDomain.__init__(self, **initializer)
 
 
-class LazyNumpyOperation():
+class _LazyNumpyOperation():
     """This class provides lazy numpy operations for MOM6Variable. This
     class should not be used on its own."""
 
@@ -264,7 +264,7 @@ class LazyNumpyOperation():
         return func(array, *args, **kwargs)
 
 
-class BoundaryCondition():
+class _BoundaryCondition():
     """This class provides boundary conditions for MOM6Variable. This
     class should not be used on its own."""
 
@@ -306,7 +306,7 @@ class BoundaryCondition():
         return self.append_halo_to_array(array)
 
 
-def get_var_at_z(array, z, e, fillvalue):
+def _get_var_at_z(array, z, e, fillvalue):
     array_out = np.full(
         (array.shape[0], z.shape[0], array.shape[2], array.shape[3]),
         fillvalue)
@@ -321,7 +321,7 @@ def get_var_at_z(array, z, e, fillvalue):
     return array_out
 
 
-def get_rho_at_z(array, z, zl, fillvalue):
+def _get_rho_at_z(array, z, zl, fillvalue):
     array_out = np.full(
         (array.shape[0], z.shape[0], array.shape[2], array.shape[3]),
         fillvalue)
@@ -363,12 +363,12 @@ class MOM6Variable(_txyzDomain):
             raise TypeError('Not a MOM6variable')
         self._initial_dimensions = list(self._v.dimensions)
         self._current_dimensions = self._initial_dimensions
-        self.determine_location()
+        self._determine_location()
         self.fh = fh
         initializer['fh'] = fh
         _txyzDomain.__init__(self, **initializer)
         self.array = None
-        self.polish(**initializer)
+        self._polish(**initializer)
         try:
             self._average_DT = fh.variables['average_DT'][:]
         except KeyError:
@@ -486,7 +486,14 @@ class MOM6Variable(_txyzDomain):
                         self, by_index=True, fh=self.fh, **kwargs_dom)
         return self
 
-    def polish(self, **initializer):
+    def _polish(self, **initializer):
+        """This method applies the kwargs from initializer. This
+        method should not be directly used.
+
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         self.final_loc(initializer.get('final_loc', None))
         self.fillvalue(initializer.get('fillvalue', 0))
         self.bc_type(initializer.get('bc_type', None))
@@ -497,6 +504,23 @@ class MOM6Variable(_txyzDomain):
         return self
 
     def final_loc(self, final_loc=None):
+        """Sets the final location of MOM6Variable
+
+        Possible usage:
+
+        >>> MOM6Variable('u',fh).final_loc('ul').read()
+
+        Same as:
+
+        >>> MOM6Variable('u',fh,final_loc='ul').read()
+
+        :param final_loc: Two alphabet string (One of 'h','u','v', or 'q'
+        and one of 'l' or 'i'). Default is the location of the
+        variable e.g. u will be at 'ul', e at 'hi', etc.
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         if final_loc:
             self._final_loc = final_loc
         else:
@@ -506,18 +530,55 @@ class MOM6Variable(_txyzDomain):
         return self
 
     def fillvalue(self, fillvalue):
+        """Sets the fillvalue for masked arrays (these are generally
+        values at topography, either 0 or np.nan)
+
+        :param fillvalue: 0 (default) or np.nan
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         self._fillvalue = fillvalue
         return self
 
     def bc_type(self, bc_type):
+        """Specifies the boundary conditions for the top, bottom,
+        south, north, west, and east boundaries.
+
+        Example:
+
+        bc_type = dict(v=['neumann', 'dirichleth', 'zeros', 'dirichletq', 'dirichleth', 'dirichleth'])
+
+        TODO: Simplify specifying BCs
+
+        :param bc_type: Dict indicating six boundary conditions
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         self._bc_type = bc_type
         return self
 
     def geometry(self, geometry):
+        """Specifies the GridGeometry object. This is necessary when
+        differentiating or moving location (e.g. from u to h points) of the variable.
+
+        :param geometry: pymom6.GridGeometry instance
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         self._geometry = geometry
         return self
 
-    def determine_location(self):
+    def _determine_location(self):
+        """Determines the current location of a MOM6Variable based on
+        its current dimensions
+
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         dims = self._current_dimensions
         if 'xh' in dims and 'yh' in dims:
             self._current_hloc = 'h'
@@ -533,6 +594,13 @@ class MOM6Variable(_txyzDomain):
             self._current_vloc = 'i'
 
     def return_dimensions(self):
+        """Gives the current dimensions of a MOM6Variable. This method
+        is also invoked by MOM6Variable.dimension property.
+
+        :returns: A dictionary of current dimensions
+        :rtype: OrderedDict
+
+        """
         dims = self._current_dimensions
         return_dims = OrderedDict()
         for dim in dims:
@@ -630,7 +698,7 @@ class MOM6Variable(_txyzDomain):
 
     divide_by = partialmethod(multiply_by, power=-1)
 
-    BoundaryCondition = BoundaryCondition
+    BoundaryCondition = _BoundaryCondition
     _default_bc_type = dict(
         u=[
             'neumann', 'dirichleth', 'dirichleth', 'dirichleth', 'zeros',
@@ -700,7 +768,7 @@ class MOM6Variable(_txyzDomain):
             self._current_dimensions[1] = 'zi'
         else:
             self._current_dimensions[1] = 'zl'
-        self.determine_location()
+        self._determine_location()
 
     def adjust_dimensions_and_indices_for_horizontal_move(self, axis, ns, ne):
         self.modify_index(axis, 0, ns)
@@ -711,7 +779,7 @@ class MOM6Variable(_txyzDomain):
         elif current_dimension[1] == 'q':
             current_dimension[1] = 'h'
         self._current_dimensions[axis] = "".join(current_dimension)
-        self.determine_location()
+        self._determine_location()
 
     def move_to(self, new_loc):
         if new_loc in ['l', 'i'] and new_loc != self._current_vloc:
@@ -757,7 +825,7 @@ class MOM6Variable(_txyzDomain):
         self.operations.append(dadx)
         return self
 
-    LazyNumpyOperation = LazyNumpyOperation
+    LazyNumpyOperation = _LazyNumpyOperation
 
     def np_ops(self, npfunc, *args, **kwargs):
         sets_hloc = kwargs.get('sets_hloc', None)
@@ -858,10 +926,10 @@ class MOM6Variable(_txyzDomain):
 
     get_rho_at_z = staticmethod(
         jit(float64[:, :, :, :](float64[:, :, :, :], float64[:], float64[:],
-                                float32))(get_rho_at_z))
+                                float32))(_get_rho_at_z))
     get_var_at_z = staticmethod(
         jit(float64[:, :, :, :](float64[:, :, :, :], float64[:],
-                                float64[:, :, :, :], float32))(get_var_at_z))
+                                float64[:, :, :, :], float32))(_get_var_at_z))
 
     def toz(self, z, e=None, dimstr='z (m)'):
         new = copy.copy(self)

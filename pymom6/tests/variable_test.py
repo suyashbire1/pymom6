@@ -469,7 +469,7 @@ class test_variable(unittest.TestCase):
         e[:, 1] = -1000
         e[:, 2] = -2000
         z = np.array([-2500, -1250, -750, -1])
-        array_at_z = pymom6.get_var_at_z(array, z, e, 0)
+        array_at_z = pymom6._get_var_at_z(array, z, e, 0)
         self.assertTrue(np.all(array_at_z[:, 0] == 0))
         self.assertTrue(np.all(array_at_z[:, 1] == 1))
         self.assertTrue(np.all(array_at_z[:, 2] == 2))
