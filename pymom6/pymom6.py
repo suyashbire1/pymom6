@@ -90,7 +90,13 @@ class Dataset():
 
 
 class GridGeometry():
-    """This class holds the variables from ocean_geometry.nc file"""
+    """This class holds the variables from ocean_geometry.nc file
+
+    :param filename: Name of ocean_geometry file
+    :returns: A class with references to variables of ocean_geometry.nc file
+    :rtype: pymom6.GridGeometry
+
+    """
 
     def __init__(self, filename):
         """Creates the GridGeometry class instance.
@@ -526,7 +532,7 @@ class MOM6Variable(_txyzDomain):
         else:
             self.final_loc(self._current_hloc + self._current_vloc)
             self._final_dimensions = tuple(self._current_dimensions)
-        self.get_final_location_dimensions()
+        self._get_final_location_dimensions()
         return self
 
     def fillvalue(self, fillvalue):
@@ -614,6 +620,14 @@ class MOM6Variable(_txyzDomain):
 
     @staticmethod
     def get_dimensions_by_location(loc):
+        """Returns the names of the dimensions corresponding to a
+        location, loc.
+
+        :param loc: Location (same format as final_loc, 2 letter string)
+        :returns: 4-element tuple containing dimension names
+        :rtype: tuple
+
+        """
         loc_registry_hor = dict(
             u=['yh', 'xq'], v=['yq', 'xh'], h=['yh', 'xh'], q=['yq', 'xq'])
         loc_registry_ver = dict(l='zl', i='zi')
@@ -623,19 +637,56 @@ class MOM6Variable(_txyzDomain):
         hdims = loc_registry_hor[hloc]
         return tuple(['Time', vdim, *hdims])
 
-    def get_final_location_dimensions(self):
+    def _get_final_location_dimensions(self):
+        """Returns dimensions of final location
+
+        :returns: None
+        :rtype: Nonetype
+
+        """
         self._final_hloc = self._final_loc[0]
         self._final_vloc = self._final_loc[1]
         self._final_dimensions = self.get_dimensions_by_location(
             self._final_loc)
 
     def modify_index(self, axis, startend, value):
+        """This method modifies the indices associated with the axis
+
+        :param axis: One of 0,1,2,3 corresponding to Time, z, y, or x axis
+        :param startend: 0 or 1 indicates whether the starting or the
+        ending index is modified, respectively
+        :param value: Modify the index by this value
+        :returns: None
+        :rtype: Nonetype
+
+        """
         dim = self._final_dimensions[axis]
         axis_indices = list(self.indices[dim])
         axis_indices[startend] += value
         self.indices[dim] = tuple(axis_indices)
 
     def modify_index_return_self(self, axis, startend, value):
+        """Same as modify_index. This method returns self at the end.
+        This method is used to create convinience methods xsm, xep,
+        ysm, yep, zsm, and zep. The first, second, and third alphabets
+        stand for the axis, starting or ending index, and plus or
+        minus. These methods add or subtract one from the index of the
+        given axis.
+
+        For example if you want to lengthen the x-axis domain towards
+        the east, you should use xep as this increases the ending
+        index of x by 1. Conversely, if you want to extend the x-axis
+        domain towrds the west, you should use xsm as this subtracts 1
+        from the starting index of x.
+
+        :param axis: One of 0,1,2,3 corresponding to Time, z, y, or x axis
+        :param startend: 0 or 1 indicates whether the starting or the
+        ending index is modified, respectively
+        :param value: Modify the index by this value
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         self.modify_index(axis, startend, value)
         return self
 
@@ -647,23 +698,47 @@ class MOM6Variable(_txyzDomain):
     zep = partialmethod(modify_index_return_self, 1, 1, 1)
 
     def get_slice(self):
+        """Populates the _slice attribute of MOM6Variable based on
+        current dimensions. This slice can be used to slice other
+        arrays.
+
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         # assert self._final_dimensions == tuple(self._current_dimensions)
         self._slice = []
         for axis in range(4):
-            indices = self.get_slice_by_axis(axis)
+            indices = self._get_slice_by_axis(axis)
             self._slice.append(slice(*indices))
         self._slice = tuple(self._slice)
         return self
 
     def get_slice_2D(self):
+        """Populates the _slice_2D attribute of MOM6Variable based on
+        current dimensions. Only x and y slices are populated. This
+        slice can be used to slice other arrays.
+
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         self._slice_2D = []
         for axis in range(2, 4):
-            indices = self.get_slice_by_axis(axis)
+            indices = self._get_slice_by_axis(axis)
             self._slice_2D.append(slice(*indices))
         self._slice_2D = tuple(self._slice_2D)
         return self
 
-    def get_slice_by_axis(self, axis):
+    def _get_slice_by_axis(self, axis):
+        """Returns slice for axis. This method is meant for internal
+        use.
+
+        :param axis: 0, 1, 2, or 3 for t, z, y, or x
+        :returns: list containing beginning and ending index of the axis
+        :rtype: List
+
+        """
         dims = self._final_dimensions
         dim = dims[axis]
         indices = list(self.indices[dim])
@@ -677,6 +752,15 @@ class MOM6Variable(_txyzDomain):
         return indices
 
     def read(self):
+        """This method reads the data from the disk into memory. Once
+        this method is called all the pre-read methods should not be
+        used. Post-read methods should be used only after this method
+        has been called.
+
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         self.get_slice()
 
         def lazy_read_and_fill(array):
@@ -690,6 +774,16 @@ class MOM6Variable(_txyzDomain):
         return self
 
     def multiply_by(self, multiplier, power=1):
+        """This is a post-read method that multiplies the MOM6Variable
+        by an attribute of GridGeometry.
+
+        :param multiplier: A string indicating any attribute from
+        GridGeometry like area, dxT, etc.
+        :param power: 1 (default) or -1 (used for divide_by method)
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         self.get_slice_2D()
         multiplier = getattr(self._geometry, multiplier)[self._slice_2D]**power
         multiplier = self.implement_BC_if_necessary_for_multiplier(multiplier)
@@ -717,6 +811,15 @@ class MOM6Variable(_txyzDomain):
         ])
 
     def implement_BC_if_necessary(self):
+        """This post-read method checks if any of the indices extend
+        beyond the buondary implements boundary conditions as
+        specified by bc_type (or default spedified by _default_bc_type
+        attribute)
+
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         dims = self._final_dimensions
         if self._bc_type is None:
             self._bc_type = self._default_bc_type
@@ -735,12 +838,33 @@ class MOM6Variable(_txyzDomain):
         return self
 
     @staticmethod
-    def vertical_move(array):
+    def _vertical_move(array):
+        """Moves array in the vertical direction from l to i or i to l.
+
+        :param array: np.ndarray
+        :returns: moved np.ndarray
+        :rtype: np.ndarray
+
+        """
         return 0.5 * (array[:, :-1, :, :] + array[:, 1:, :, :])
 
     @staticmethod
-    def check_possible_movements_for_move(current_loc, new_loc=None,
-                                          axis=None):
+    def _check_possible_movements_for_move(current_loc,
+                                           new_loc=None,
+                                           axis=None):
+        """Checks where the current MOM6Variable can be moved. This is
+        based on the fact the a move can only be accomplished to an
+        adjacent location (.e.g. h to u or v to q or u to q or h to v)
+        but not in a diagonal direction (e.g. h to q or u to v). This
+        method is meant for internal use.
+
+        :param current_loc: Current location (2 letter string)
+        :param new_loc: New location (2 letter string)
+        :param axis: 0, 1, 2, 3 for t, z, y, or x
+        :returns: tuple containing start and end movement (ns and ne)
+        :rtype: tuple
+
+        """
         possible_from_to = dict(
             u=['q', 'h'], v=['h', 'q'], h=['v', 'u'], q=['u', 'v'])
         possible_ns = dict(u=[0, 1], v=[1, 0], h=[0, 0], q=[1, 1])
@@ -757,11 +881,26 @@ class MOM6Variable(_txyzDomain):
             return (ns, ne)
 
     @staticmethod
-    def horizontal_move(axis, array):
+    def _horizontal_move(axis, array):
+        """Moves array horizontally
+
+        :param axis: 2 or 3
+        :param array: np.ndarray
+        :returns: moved np.ndarray
+        :rtype: np.ndarray
+
+        """
         return 0.5 * (np.take(array, range(array.shape[axis] - 1), axis=axis) +
                       np.take(array, range(1, array.shape[axis]), axis=axis))
 
-    def adjust_dimensions_and_indices_for_vertical_move(self):
+    def _adjust_dimensions_and_indices_for_vertical_move(self):
+        """Changes the dimensions from zl to zi or vice versa for
+        vertical move.
+
+        :returns: None
+        :rtype: NoneType
+
+        """
         self.modify_index(1, 1, -1)
         if self._current_vloc == 'l':
             self.modify_index(1, 0, 1)
@@ -770,7 +909,16 @@ class MOM6Variable(_txyzDomain):
             self._current_dimensions[1] = 'zl'
         self._determine_location()
 
-    def adjust_dimensions_and_indices_for_horizontal_move(self, axis, ns, ne):
+    def _adjust_dimensions_and_indices_for_horizontal_move(self, axis, ns, ne):
+        """Changes the dimensions and indexes for horizontal move
+
+        :param axis: 2 or 3
+        :param ns: 0 or 1
+        :param ne: 0 or 1
+        :returns: None
+        :rtype: NoneType
+
+        """
         self.modify_index(axis, 0, ns)
         self.modify_index(axis, 1, ne)
         current_dimension = list(self._current_dimensions[axis])
@@ -782,19 +930,35 @@ class MOM6Variable(_txyzDomain):
         self._determine_location()
 
     def move_to(self, new_loc):
+        """Moves the MOM6Variable to a new location
+
+        :param new_loc: One letter string (u, v, h, q, l, or i). If l
+        or i is given, vertical move is assumed else horizontal move
+        is assumed.
+        :returns: MOM6Variable at a new location
+        :rtype: MOM6Variable
+
+        """
         if new_loc in ['l', 'i'] and new_loc != self._current_vloc:
-            self.adjust_dimensions_and_indices_for_vertical_move()
-            self.operations.append(self.vertical_move)
+            self._adjust_dimensions_and_indices_for_vertical_move()
+            self.operations.append(self._vertical_move)
         elif new_loc in ['u', 'v', 'h', 'q'] and new_loc != self._current_hloc:
-            axis, ns, ne = self.check_possible_movements_for_move(
+            axis, ns, ne = self._check_possible_movements_for_move(
                 self._current_hloc, new_loc=new_loc)
-            self.adjust_dimensions_and_indices_for_horizontal_move(
+            self._adjust_dimensions_and_indices_for_horizontal_move(
                 axis, ns, ne)
-            move = partial(self.horizontal_move, axis)
+            move = partial(self._horizontal_move, axis)
             self.operations.append(move)
         return self
 
     def implement_BC_if_necessary_for_multiplier(self, multiplier):
+        """Same as implement BC if necessary but for multiplier
+
+        :param multiplier: Attribute of GridGeometry (like area, dxT, etc.)
+        :returns: multiplier with boundary conditions imposed if necessary
+        :rtype: np.ndarray
+
+        """
         dims = self._final_dimensions
         for i, dim in enumerate(dims[2:]):
             indices = self.indices[dim]
@@ -807,10 +971,19 @@ class MOM6Variable(_txyzDomain):
         return multiplier
 
     def dbyd(self, axis, weights=None):
+        """This method implements the differentiation operator.
+
+        :param axis: 0, 1, 2, or 3 for t, z, y, or x
+        :param weights: If None (deafult) divisor is grid spacing, if
+        'area' divisor is cell area
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         if axis > 1:
-            ns, ne = self.check_possible_movements_for_move(
+            ns, ne = self._check_possible_movements_for_move(
                 self._current_hloc, axis=axis)
-            self.adjust_dimensions_and_indices_for_horizontal_move(
+            self._adjust_dimensions_and_indices_for_horizontal_move(
                 axis, ns, ne)
             divisor = self._geometry._get_divisor_for_diff(
                 self._current_hloc, axis, weights=weights)
@@ -820,7 +993,7 @@ class MOM6Variable(_txyzDomain):
         elif axis == 1:
             divisor = -10 / 1000 * np.diff(
                 self.dim_arrays[self._final_dimensions[1]][2:4])
-            self.adjust_dimensions_and_indices_for_vertical_move()
+            self._adjust_dimensions_and_indices_for_vertical_move()
         dadx = partial(lambda x, a: np.diff(a, n=1, axis=x) / divisor, axis)
         self.operations.append(dadx)
         return self
@@ -828,6 +1001,17 @@ class MOM6Variable(_txyzDomain):
     LazyNumpyOperation = _LazyNumpyOperation
 
     def np_ops(self, npfunc, *args, **kwargs):
+        """Implements functionality to apply a numpy operation to
+        MOM6Variable. If the numpy operation changes dimension sizes,
+        they must be manually adjusted using axis, ns, and ne kwargs.
+        If numpy operation changes vertical or horizontal location, it
+        should be manually set by using sets_vloc or sets_hloc kwargs.
+
+        :param npfunc: string indicating numpy method (e.g. 'nanmean')
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         sets_hloc = kwargs.get('sets_hloc', None)
         if sets_hloc is not None:
             axis = kwargs.get('axis', None)
@@ -856,6 +1040,19 @@ class MOM6Variable(_txyzDomain):
         return self
 
     def where(self, logic_function, other_array, y=None):
+        """Implements the numpy.where method for MOM6Variable
+
+        :param logic_function: numpy logical method (e.g. np.greater_equal)
+        :param other_array: array of values to be checked against (see
+        numpy.where docs)
+        :param y: Values from this array are chosen where logic_func
+        returns false (see numpy.where docs). If y is None (default)
+        MOM6Variable.array.nonzero is returned.
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
+
         def wraps_where(array):
             condition = logic_function(array, other_array)
             if y is not None:
@@ -883,6 +1080,14 @@ class MOM6Variable(_txyzDomain):
         self.indices.pop(axis_string)
 
     def nanmean(self, axis=[0, 1, 2, 3]):
+        """Implements nanmean for MOM6Variable (post-read method)
+
+        :param axis: A single axis or sequence of axes among 0, 1, 2,
+        3. The mean is taken along axis/axes supplied here
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         try:
             for ax in axis:
                 self.reduce_axis(ax, np.mean)
@@ -912,6 +1117,15 @@ class MOM6Variable(_txyzDomain):
         return self
 
     def reduce_(self, reduce_func, *args, keepdims=True, **kwargs):
+        """Implements reduction operations on MOM6Variable. Axes can
+        be specified as a single axis or a sequence of 0, 1, 2, 3.
+
+        :param reduce_func: numpy reduction operations like np.mean,
+        np.sum, etc.
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         axis = kwargs.get('axis', (0, 1, 2, 3))
         try:
             for ax in axis:
@@ -932,6 +1146,15 @@ class MOM6Variable(_txyzDomain):
                                 float64[:, :, :, :], float32))(_get_var_at_z))
 
     def toz(self, z, e=None, dimstr='z (m)'):
+        """Move MOM6Variable to z coordinate from buoyancy coordinates
+
+        :param z: np.ndarray of z locations or a single location
+        :param e: MOM6Variable containing e (isopycnal heights)
+        :param dimstr: The string to represent new vertical dimension
+        :returns: MOM6Variable in z coordinates
+        :rtype: MOM6Variable
+
+        """
         new = copy.copy(self)
         if not isinstance(z, np.ndarray):
             z = np.array(
@@ -965,12 +1188,29 @@ class MOM6Variable(_txyzDomain):
         return new
 
     def conditional_toz(self, toz, z, e, dimstr='z (m)'):
+        """Implements toz conditionally. See toz method documentation
+        for definitions of other arguments.
+
+        :param toz: Boolean that determines whether to run toz method
+        or not
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         if toz:
             return self.toz(z, e, dimstr=dimstr)
         else:
             return self
 
     def compute(self, check_loc=True):
+        """Sequentially executes all the lazy operations.
+
+        :param check_loc: Checks if the final location is same as the
+        current location if true else disables the check.
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         for ops in self.operations:
             self.array = ops(self.array)
         self.operations = []
@@ -986,6 +1226,15 @@ class MOM6Variable(_txyzDomain):
         return self
 
     def to_DataArray(self, check_loc=True):
+        """Converts MOM6Variable to xarray.DataArray instance. This is
+        useful for plotting.
+
+        :param check_loc: Checks if the final location is same as the
+        current location if true else disables the check.
+        :returns: xarray.DataArray of the MOM6Variable
+        :rtype: xarray.DataArray
+
+        """
         if len(self.operations) is not 0:
             self.compute(check_loc=check_loc)
         coords = self.return_dimensions()
@@ -1007,6 +1256,14 @@ class MOM6Variable(_txyzDomain):
         return da
 
     def tokm(self, axis, dim_str=None):
+        """Converts x or y axis dimension from degrees to km
+
+        :param axis: one of 2 or 3
+        :param dim_str: String representing the new dimension
+        :returns: MOM6Variable with axis converted to km
+        :rtype: MOM6Variable
+
+        """
         R = 6378
         dim_str_dict = {2: 'y (km)', 3: 'x (km)'}
         new = copy.copy(self)
@@ -1027,6 +1284,14 @@ class MOM6Variable(_txyzDomain):
         return new
 
     def tob(self, axis, dim_str=None):
+        """Converts the vertical dimension to buoyancy from density
+
+        :param axis: 1
+        :param dim_str: String representing the newly converted dimension
+        :returns: MOM6Variable
+        :rtype: MOM6Variable
+
+        """
         new = copy.copy(self)
         dim_array = list(new.dimensions.items())[axis][1]
         drhodt = -0.2
