@@ -21,7 +21,7 @@ def bc_type(request):
 
 def test_create_halo(bc_type, axis, start_or_end):
     dummy_array = np.arange(2 * 3 * 5 * 7).reshape(2, 3, 5, 7)
-    dummy_BC = pymom6.BoundaryCondition(bc_type, axis, start_or_end)
+    dummy_BC = pymom6._BoundaryCondition(bc_type, axis, start_or_end)
     dummy_BC.create_halo(dummy_array)
     if dummy_BC.bc_type == 'dirichletq':
         take_index = 1 if start_or_end == 0 else -2
@@ -36,7 +36,7 @@ def test_create_halo(bc_type, axis, start_or_end):
 
 def test_dummy_BC_append_halo(bc_type, axis, start_or_end):
     dummy_array = np.arange(2 * 3 * 5 * 7).reshape(2, 3, 5, 7)
-    dummy_BC = pymom6.BoundaryCondition(bc_type, axis, start_or_end)
+    dummy_BC = pymom6._BoundaryCondition(bc_type, axis, start_or_end)
     dummy_BC.create_halo(dummy_array)
     array = dummy_BC.append_halo_to_array(dummy_array)
     if start_or_end == 0:
