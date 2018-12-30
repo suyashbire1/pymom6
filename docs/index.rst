@@ -9,5 +9,5 @@ Welcome to pymom6's documentation!
 .. toctree::
    :maxdepth: 2
 
-   example_notebook
+   example
    pymom6
