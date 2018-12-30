@@ -6,8 +6,18 @@ A python package built on top of numpy and xarray to deal with MOM6 output.
 <a href='http://pymom6.readthedocs.io/en/latest/?badge=latest'><img src='https://readthedocs.org/projects/pymom6/badge/?version=latest' alt='Documentation Status' /></a>
 #+end_html
 
-See the [[http://pymom6.readthedocs.io/en/latest/][docs]] for API documentation.
+See the [https://pymom6.readthedocs.io/en/latest/][docs]] for API documentation.
+See the [https://pymom6.readthedocs.io/en/latest/example_notebook/][examples]] for how to use this package.
+
+
+Install:
+#+BEGIN_SRC sh
+git clone https://github.com/suyashbire1/pymom6.git
+cd pymom6
+pip3 install .
+#+END_SRC
+
 
 TODO: 
-1. Add an example case.
+1. Make examples more descriptive
 2. Explain boundary conditions.
