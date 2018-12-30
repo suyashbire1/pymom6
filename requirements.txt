@@ -5,3 +5,5 @@ numba
 pytest-cov
 codecov
 matplotlib
+nbsphinx
+ipykernel

@@ -429,7 +429,6 @@ class MOM6Variable(_txyzDomain):
             ('x', 'xh', 'xq'): 'east_lon'
         }
         for key, value in kwargs.items():
-            print(key, value)
             for possible_axis_names, domain in domain_mapping.items():
                 if key in possible_axis_names:
                     assert isinstance(value, (int, float, slice))

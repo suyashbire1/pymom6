@@ -6,3 +6,5 @@ __pycache__/
 .coverage
 .tramp*
 /docs/_build
+.ipynb_checkpoints
+*.swp
